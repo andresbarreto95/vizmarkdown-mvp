@@ -619,31 +619,6 @@
         generateBtn.addEventListener('click', generateChart);
         saveBtn.addEventListener('click', saveChart);
         
-        // --- Auto-update chart on form changes ---
-        const debouncedGenerate = (() => {
-            let timeout;
-            return () => {
-                clearTimeout(timeout);
-                timeout = setTimeout(generateChart, 300);
-            };
-        })();
-
-        const autoUpdateInputs = [
-            chartTypeSelect,
-            chartTitleInput,
-            chartLabelsInput,
-            chartDatasetInput,
-            xAxisLabelInput,
-            yAxisLabelInput,
-            roundedBordersSlider,
-            barSpacingSlider,
-            backgroundColorInput,
-            borderColorInput
-        ];
-
-        autoUpdateInputs.forEach(el => el.addEventListener('input', debouncedGenerate));
-        showValuesCheckbox.addEventListener('change', generateChart);
-        
         clearBtn.addEventListener('click', () => {
             chartNameInput.value = '';
             chartTypeSelect.value = 'bar';
