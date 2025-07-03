@@ -1,0 +1,125 @@
+Product Requirements Document: VizMarkdown MVP
+Version: 1.0 (MVP)
+Status: Approved for MVP Development
+
+1. Introduction & Vision
+1.1. Vision Statement: To provide the fastest way for anyone to create and share embeddable charts using simple text.
+
+1.2. Product Overview: VizMarkdown is a client-side tool that allows users to define charts with a simple, Markdown-like syntax, see a live preview instantly, and get embed codes for web or email. It is designed to be a quick and simple utility for generating common visualizations without complex software.
+
+2. The Problem
+2.1. Problem Statement: Creating simple, embeddable charts for websites, blogs, or emails is often cumbersome. Existing tools can be overly complex for simple tasks, while coding charts from scratch requires technical knowledge that many users lack.
+
+2.2. How We Solve It: Our product solves this by offering a single-page web application where a user can define a chart in a simple text area and immediately see a visual preview. The tool then generates the necessary embed codes, making it effortless to add visualizations to any content.
+
+3. Target Audience & User Persona
+3.1. Target Market: The initial target market includes content creators, bloggers, students, and developers who need to quickly create and embed simple data visualizations.
+
+3.2. User Persona:
+
+"Chris the Content Creator"
+
+Role: Blogger for a tech website.
+
+Goals: Quickly add simple charts to articles to make them more engaging. Find a tool that is faster than using a spreadsheet program or a complex charting library.
+
+Frustrations: Spends too much time creating simple graphics. Doesn't want to write custom code for every small chart he needs.
+
+4. Goals & Success Metrics
+4.1. Business Goals:
+
+Primary Goal: Idea Validation. To validate the core assumption that users desire a fast, text-based method for creating simple embeddable charts.
+
+Gather qualitative feedback on usability and features from at least 20 initial testers.
+
+4.2. Product Goals & KPIs:
+
+Usage Rate: 50% of unique visitors successfully generate at least one chart.
+
+Satisfaction: Collect direct user feedback to identify pain points and desired features.
+
+Feature Discovery: Track which chart types or features are most requested by testers.
+
+5. Features & Functionality (MVP)
+5.1. Core Features (MVP):
+
+Feature 1: Text-Based Chart Definition
+
+Description: A simple textarea where users can define a chart's properties and data using a Markdown-like syntax.
+
+User Story: "As Chris the Content Creator, I want to define my chart's title, labels, and data in a plain text area so I can create a visualization without using a mouse-driven interface."
+
+Acceptance Criteria: Users can input chart configuration into a textarea. The system can parse lines for chart type:, title:, labels:, and dataset:.
+
+Feature 2: Live Chart Preview
+
+Description: An area on the page that renders a preview of the chart using Chart.js.
+
+User Story: "As Chris, I want to see a live preview of my chart so I can get immediate feedback on the data and options I've defined."
+
+Acceptance Criteria: A chart is rendered on a <canvas> element. The chart updates when the "Generate Chart" button is clicked.
+
+Feature 3: Embed Code Generation
+
+Description: Two text areas that provide HTML snippets for embedding the chart on a website (via an iFrame) or in an email (as a static image).
+
+User Story: "As Chris, I want to get a simple HTML code snippet so I can easily copy and paste my chart into my blog's HTML editor."
+
+Acceptance Criteria: An iFrame embed code is generated. A placeholder image embed code is generated. A "Copy" button is available for each embed code and copies the content to the clipboard.
+
+Feature 4: Simulated Dashboard & Persistence
+
+Description: The ability to save chart configurations to the browser's localStorage and view them in a "Dashboard" view. This simulates persistence for a single user.
+
+User Story: "As a returning user, I want to load a chart I made yesterday so I can tweak it without re-typing everything."
+
+Acceptance Criteria: A "Save Chart" button saves the current chart name and Markdown to localStorage. A "Dashboard" view lists all saved charts. Clicking "Load" on a saved chart populates the input fields. Clicking "Delete" removes a chart.
+
+6. Design & User Experience (UX)
+6.1. User Flow: User lands on page -> Defines chart in textarea -> Clicks "Generate" -> Views preview and embed codes -> Optionally clicks "Save" -> Clicks "Dashboard" navigation button to see saved charts -> Clicks "Load" to edit a previous chart.
+
+6.2. Wireframes & Mockups: [Link to a simple design file or diagram showing a two-panel layout for input/preview].
+
+7. Technical Requirements
+7.1. Tech Stack:
+
+Core: Vanilla JavaScript and HTML.
+
+Styling: Tailwind CSS (linked via CDN).
+
+Charting: Chart.js library (linked via CDN).
+
+Database: Browser localStorage for persistence simulation.
+
+Hosting: A static hosting provider (e.g., Netlify, Vercel, GitHub Pages).
+
+7.2. Integrations: None for this MVP.
+
+7.3. Performance & Scalability: The application must be a single, lightweight HTML file that loads and executes quickly in modern browsers.
+
+7.4. Security: All data is stored client-side in the user's browser; no user data is transmitted or stored on a server.
+
+8. Assumptions, Constraints & Dependencies
+8.1. Assumptions: Users are comfortable with a simple, text-based syntax. Client-side storage is sufficient for MVP validation.
+
+8.2. Constraints: The MVP must be built within a single HTML file to maintain simplicity for AI-assisted development.
+
+8.3. Dependencies: The project relies on the public CDNs for Chart.js and Tailwind CSS being available.
+
+9. Go-to-Market Plan
+9.1. Pricing & Monetization: The MVP will be a free tool. Monetization is not a goal at this stage.
+
+9.2. Launch Strategy:
+
+Phase 1: Share the live application URL with a small group of beta testers.
+
+Phase 2: Collect feedback on usability, syntax, and desired features.
+
+Phase 3: Analyze feedback to determine if the core idea is validated and plan next steps.
+
+10. Open Questions
+Is the Markdown-like syntax clear and intuitive for non-technical users?
+
+What are the most-requested chart types beyond basic bar/line/pie?
+
+Do initial testers express a strong need for real user accounts and cloud-based saving?

@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VizMarkdown - Create Charts with Simple Text</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-900">VizMarkdown</h1>
+                    <span class="ml-2 text-sm text-gray-500">Create charts with simple text</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="dashboardBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Dashboard
+                    </button>
+                    <button id="createDashboardBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Create Dashboard
+                    </button>
+                    <button id="editorBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors hidden">
+                        Editor
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Editor View -->
+        <div id="editorView">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Input Panel -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Chart Definition</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Chart Name</label>
+                            <input type="text" id="chartName" placeholder="My Awesome Chart" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Chart Type</label>
+                            <select id="chartType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="bar">Bar Chart</option>
+                                <option value="line">Line Chart</option>
+                                <option value="pie">Pie Chart</option>
+                                <option value="doughnut">Doughnut Chart</option>
+                                <option value="radar">Radar Chart</option>
+                                <option value="polarArea">Polar Area Chart</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Chart Title</label>
+                            <input type="text" id="chartTitle" placeholder="Enter chart title" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Labels (comma-separated)</label>
+                            <input type="text" id="chartLabels" placeholder="Q1, Q2, Q3, Q4" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Dataset (comma-separated numbers)</label>
+                            <textarea id="chartDataset" rows="4" placeholder="Series A, 120, 190, 300, 500&#10;Series B, 100, 150, 200, 250" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                        
+                        <!-- Axis labels -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">X-Axis Label</label>
+                                <input type="text" id="xAxisLabel" placeholder="Quarter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Y-Axis Label</label>
+                                <input type="text" id="yAxisLabel" placeholder="Sales" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <!-- Show values toggle -->
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" id="showValues" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <label for="showValues" class="text-sm font-medium text-gray-700">Show Values on Chart</label>
+                        </div>
+
+                        <!-- Bar-specific controls -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rounded Borders (bar only)</label>
+                            <input type="range" id="roundedBorders" min="0" max="100" value="0" class="w-full">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Space Between Bars (bar only)</label>
+                            <input type="range" id="barSpacing" min="0" max="1" step="0.05" value="0.1" class="w-full">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Chart Colors</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Background Color</label>
+                                    <input type="color" id="backgroundColor" value="#36a2eb" class="w-full h-10 border border-gray-300 rounded-md cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Border Color</label>
+                                    <input type="color" id="borderColor" value="#36a2eb" class="w-full h-10 border border-gray-300 rounded-md cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Advanced Configuration (Optional)</label>
+                            <textarea id="chartConfig" rows="8" placeholder="Additional chart options can be added here in the future..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm bg-gray-50"></textarea>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button id="generateBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
+                                Generate Chart
+                            </button>
+                            <button id="saveBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
+                                Save Chart
+                            </button>
+                            <button id="clearBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Panel -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Live Preview</h2>
+                    <div class="chart-container">
+                        <canvas id="chartCanvas"></canvas>
+                    </div>
+                    
+                    <!-- Embed Codes -->
+                    <div class="mt-6 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Website Embed (iFrame)</label>
+                            <div class="flex">
+                                <textarea id="iframeCode" rows="3" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 text-sm font-mono"></textarea>
+                                <button id="copyIframeBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-md text-sm font-medium transition-colors">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Embed (Static Image)</label>
+                            <div class="flex">
+                                <textarea id="imageCode" rows="3" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 text-sm font-mono"></textarea>
+                                <button id="copyImageBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-md text-sm font-medium transition-colors">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="hidden">
+            <div class="bg-white rounded-lg shadow-sm border p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Saved Charts</h2>
+                
+                <div id="savedChartsList" class="space-y-4">
+                    <!-- Saved charts will be populated here -->
+                </div>
+                
+                <div id="noChartsMessage" class="text-center py-12 text-gray-500">
+                    <p>No saved charts yet. Create your first chart in the editor!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Dashboard View -->
+        <div id="createDashboardView" class="hidden">
+            <div class="bg-white rounded-lg shadow-sm border p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900">Create Dashboard</h2>
+                    <div class="flex space-x-3">
+                        <button id="saveDashboardBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                            Save Dashboard
+                        </button>
+                        <button id="exportDashboardBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                            Export HTML
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Dashboard Configuration -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Dashboard Title</label>
+                        <input type="text" id="dashboardTitle" placeholder="My Analytics Dashboard" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Layout</label>
+                        <select id="dashboardLayout" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="2x2">2x2 Grid</option>
+                            <option value="3x2">3x2 Grid</option>
+                            <option value="2x3">2x3 Grid</option>
+                            <option value="1x4">1x4 Row</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                        <select id="dashboardTheme" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="blue">Blue</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Chart Selection -->
+                <div class="mb-6">
+                    <h3 class="text-md font-medium text-gray-900 mb-4">Select Charts for Dashboard</h3>
+                    <div id="chartSelectionGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Chart selection cards will be populated here -->
+                    </div>
+                    <div id="noChartsForDashboard" class="text-center py-8 text-gray-500">
+                        <p>No saved charts available. Create some charts first!</p>
+                    </div>
+                </div>
+                
+                <!-- Dashboard Preview -->
+                <div class="mb-6">
+                    <h3 class="text-md font-medium text-gray-900 mb-4">Dashboard Preview</h3>
+                    <div id="dashboardPreview" class="border border-gray-200 rounded-lg p-4 min-h-96 bg-gray-50">
+                        <div id="dashboardGrid" class="grid grid-cols-2 gap-4">
+                            <!-- Dashboard charts will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Global variables
+        let currentChart = null;
+        let savedCharts = JSON.parse(localStorage.getItem('vizmarkdown_charts') || '[]');
+        let savedDashboards = JSON.parse(localStorage.getItem('vizmarkdown_dashboards') || '[]');
+        let selectedCharts = [];
+        let dashboardCharts = [];
+
+        // DOM elements
+        const chartNameInput = document.getElementById('chartName');
+        const chartTypeSelect = document.getElementById('chartType');
+        const chartTitleInput = document.getElementById('chartTitle');
+        const chartLabelsInput = document.getElementById('chartLabels');
+        const chartDatasetInput = document.getElementById('chartDataset');
+        const backgroundColorInput = document.getElementById('backgroundColor');
+        const borderColorInput = document.getElementById('borderColor');
+        const chartConfigTextarea = document.getElementById('chartConfig');
+        const generateBtn = document.getElementById('generateBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const dashboardBtn = document.getElementById('dashboardBtn');
+        const createDashboardBtn = document.getElementById('createDashboardBtn');
+        const editorBtn = document.getElementById('editorBtn');
+        const editorView = document.getElementById('editorView');
+        const dashboardView = document.getElementById('dashboardView');
+        const createDashboardView = document.getElementById('createDashboardView');
+        const savedChartsList = document.getElementById('savedChartsList');
+        const noChartsMessage = document.getElementById('noChartsMessage');
+        const dashboardTitle = document.getElementById('dashboardTitle');
+        const dashboardLayout = document.getElementById('dashboardLayout');
+        const dashboardTheme = document.getElementById('dashboardTheme');
+        const chartSelectionGrid = document.getElementById('chartSelectionGrid');
+        const noChartsForDashboard = document.getElementById('noChartsForDashboard');
+        const dashboardPreview = document.getElementById('dashboardPreview');
+        const dashboardGrid = document.getElementById('dashboardGrid');
+        const saveDashboardBtn = document.getElementById('saveDashboardBtn');
+        const exportDashboardBtn = document.getElementById('exportDashboardBtn');
+        const iframeCode = document.getElementById('iframeCode');
+        const imageCode = document.getElementById('imageCode');
+        const copyIframeBtn = document.getElementById('copyIframeBtn');
+        const copyImageBtn = document.getElementById('copyImageBtn');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const xAxisLabelInput = document.getElementById('xAxisLabel');
+        const yAxisLabelInput = document.getElementById('yAxisLabel');
+        const showValuesCheckbox = document.getElementById('showValues');
+        const roundedBordersSlider = document.getElementById('roundedBorders');
+        const barSpacingSlider = document.getElementById('barSpacing');
+
+        // Initialize with sample data
+        chartNameInput.value = 'Sample Sales Chart';
+        chartTypeSelect.value = 'bar';
+        chartTitleInput.value = 'Sales Performance';
+        chartLabelsInput.value = 'Q1, Q2, Q3, Q4';
+        chartDatasetInput.value = 'Series A, 120, 190, 300, 500';
+        backgroundColorInput.value = '#36a2eb';
+        borderColorInput.value = '#36a2eb';
+
+        // Register data-labels plugin if available
+        if (window.ChartDataLabels) {
+            Chart.register(ChartDataLabels);
+        }
+
+        // Get chart data from form fields
+        function getChartData() {
+            const labels = chartLabelsInput.value.split(',').map(l => l.trim()).filter(Boolean);
+            const lines = chartDatasetInput.value.split('\n').map(l => l.trim()).filter(Boolean);
+            const datasets = [];
+            lines.forEach((line, idx) => {
+                const parts = line.split(',').map(p => p.trim());
+                if (parts.length < 2) return;
+                const label = parts.shift();
+                const data = parts.map(p => parseFloat(p) || 0);
+                datasets.push({ label, data });
+            });
+            // First series for legacy checks
+            const dataset = datasets.length ? datasets[0].data : [];
+
+            return {
+                labels,
+                datasets,
+                dataset,
+                chartType: chartTypeSelect.value,
+                title: chartTitleInput.value,
+                backgroundColor: backgroundColorInput.value,
+                borderColor: borderColorInput.value,
+                xAxisLabel: xAxisLabelInput.value,
+                yAxisLabel: yAxisLabelInput.value,
+                showValues: showValuesCheckbox.checked,
+                roundedBorders: parseInt(roundedBordersSlider.value, 10) || 0,
+                barSpacing: parseFloat(barSpacingSlider.value) || 0
+            };
+        }
+
+        // Generate Chart.js configuration
+        function generateChartConfig(chartData) {
+            const { labels, datasets, dataset, chartType, title, backgroundColor, borderColor, xAxisLabel, yAxisLabel, showValues, roundedBorders, barSpacing } = chartData;
+
+            const genColors = (base, count, alpha = 0.6) => {
+                const out = [];
+                for (let i = 0; i < count; i++) {
+                    const hue = (i * 40) % 360;
+                    const rgb = hslToRgb(hue / 360, 0.7, 0.6);
+                    out.push(`rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`);
+                }
+                return out;
+            };
+
+            let dsConfig;
+            if (datasets && datasets.length) {
+                const fills = genColors(backgroundColor, datasets.length, 0.6);
+                const borders = genColors(borderColor, datasets.length, 1);
+                dsConfig = datasets.map((ds, i) => ({
+                    label: ds.label || `Series ${i + 1}`,
+                    data: ds.data,
+                    backgroundColor: fills[i],
+                    borderColor: borders[i],
+                    borderWidth: 2,
+                    ...(chartType === 'bar' ? { borderRadius: roundedBorders, barPercentage: 1 - barSpacing, categoryPercentage: 1 - barSpacing } : {})
+                }));
+            } else {
+                dsConfig = [{
+                    label: title || 'Dataset',
+                    data: dataset,
+                    backgroundColor: genColors(backgroundColor, dataset.length, 0.6),
+                    borderColor: genColors(borderColor, dataset.length, 1),
+                    borderWidth: 2
+                }];
+            }
+
+            return {
+                type: chartType,
+                data: { labels, datasets: dsConfig },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        datalabels: { display: showValues, color: '#000', anchor: 'end', align: 'top' },
+                        title: { display: true, text: title || 'Chart Title', font: { size: 16 } },
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: (chartType !== 'pie' && chartType !== 'doughnut' && chartType !== 'polarArea') ? {
+                        x: { title: { display: !!xAxisLabel, text: xAxisLabel } },
+                        y: { beginAtZero: true, title: { display: !!yAxisLabel, text: yAxisLabel } }
+                    } : undefined
+                }
+            };
+        }
+
+        // Helper function to convert HSL to RGB
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+
+        // Render chart
+        function renderChart(config) {
+            const canvas = document.getElementById('chartCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            currentChart = new Chart(ctx, config);
+        }
+
+        // Generate embed codes
+        function generateEmbedCodes(chartName, chartData) {
+            const currentUrl = window.location.href;
+            const encodedData = encodeURIComponent(JSON.stringify(chartData));
+            const encodedName = encodeURIComponent(chartName);
+            
+            // iFrame embed code
+            const iframeEmbed = `<iframe src="${currentUrl}?embed=true&name=${encodedName}&data=${encodedData}" width="100%" height="400" frameborder="0"></iframe>`;
+            iframeCode.value = iframeEmbed;
+            
+            // Static image embed code (placeholder)
+            const imageEmbed = `<img src="data:image/png;base64,CHART_IMAGE_PLACEHOLDER" alt="${chartName}" style="max-width: 100%; height: auto;" />`;
+            imageCode.value = imageEmbed;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`;
+            toastMessage.textContent = message;
+            
+            // Show toast
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Hide toast
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+
+        // Save chart to localStorage
+        function saveChart() {
+            const name = chartNameInput.value.trim();
+            const chartData = getChartData();
+            
+            if (!name || !chartData.title || chartData.labels.length === 0 || chartData.dataset.length === 0) {
+                showToast('Please provide chart name, title, labels, and dataset', 'error');
+                return;
+            }
+            
+            const savedChartData = {
+                id: Date.now(),
+                name: name,
+                chartData: chartData,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Check if chart with same name exists
+            const existingIndex = savedCharts.findIndex(chart => chart.name === name);
+            if (existingIndex !== -1) {
+                savedCharts[existingIndex] = savedChartData;
+            } else {
+                savedCharts.push(savedChartData);
+            }
+            
+            localStorage.setItem('vizmarkdown_charts', JSON.stringify(savedCharts));
+            showToast('Chart saved successfully!');
+        }
+
+        // Load chart from localStorage
+        function loadChart(chartId) {
+            const chart = savedCharts.find(c => c.id === chartId);
+            if (chart) {
+                chartNameInput.value = chart.name;
+                
+                // Load chart data from saved chart
+                if (chart.chartData) {
+                    // New format with separate fields
+                    chartTypeSelect.value = chart.chartData.chartType || 'bar';
+                    chartTitleInput.value = chart.chartData.title || '';
+                    chartLabelsInput.value = chart.chartData.labels.join(', ');
+                    chartDatasetInput.value = chart.chartData.dataset.join(', ');
+                    backgroundColorInput.value = chart.chartData.backgroundColor || '#36a2eb';
+                    borderColorInput.value = chart.chartData.borderColor || '#36a2eb';
+                } else if (chart.config) {
+                    // Legacy format - parse the config string
+                    const lines = chart.config.split('\n').filter(line => line.trim());
+                    const parsedData = {};
+                    
+                    lines.forEach(line => {
+                        const [key, ...valueParts] = line.split(':');
+                        if (key && valueParts.length > 0) {
+                            const value = valueParts.join(':').trim();
+                            parsedData[key.trim()] = value;
+                        }
+                    });
+                    
+                    chartTypeSelect.value = (parsedData['chart type'] || 'bar').toLowerCase();
+                    chartTitleInput.value = parsedData.title || '';
+                    chartLabelsInput.value = parsedData.labels || '';
+                    chartDatasetInput.value = parsedData.dataset || '';
+                }
+                
+                generateChart();
+            }
+        }
+
+        // Delete chart from localStorage
+        function deleteChart(chartId) {
+            savedCharts = savedCharts.filter(c => c.id !== chartId);
+            localStorage.setItem('vizmarkdown_charts', JSON.stringify(savedCharts));
+            renderDashboard();
+            showToast('Chart deleted successfully!');
+        }
+
+        // Render dashboard
+        function renderDashboard() {
+            if (savedCharts.length === 0) {
+                savedChartsList.innerHTML = '';
+                noChartsMessage.classList.remove('hidden');
+            } else {
+                noChartsMessage.classList.add('hidden');
+                savedChartsList.innerHTML = savedCharts.map(chart => {
+                    let chartInfo = '';
+                    if (chart.chartData) {
+                        // New format
+                        chartInfo = `${chart.chartData.chartType} chart: ${chart.chartData.title}`;
+                    } else if (chart.config) {
+                        // Legacy format
+                        chartInfo = chart.config.substring(0, 100) + (chart.config.length > 100 ? '...' : '');
+                    }
+                    
+                    return `
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h3 class="font-medium text-gray-900">${chart.name}</h3>
+                                    <p class="text-sm text-gray-500 mt-1">Created: ${new Date(chart.createdAt).toLocaleDateString()}</p>
+                                    <pre class="text-xs text-gray-600 mt-2 bg-gray-100 p-2 rounded overflow-x-auto">${chartInfo}</pre>
+                                </div>
+                                <div class="flex space-x-2 ml-4">
+                                    <button onclick="loadChart(${chart.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                        Load
+                                    </button>
+                                    <button onclick="deleteChart(${chart.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Generate chart
+        function generateChart() {
+            console.log('Generate Chart button clicked');
+            const chartData = getChartData();
+            
+            if (!chartData.title || chartData.labels.length === 0 || chartData.dataset.length === 0) {
+                showToast('Please provide title, labels, and dataset', 'error');
+                return;
+            }
+            
+            try {
+                const chartConfig = generateChartConfig(chartData);
+                renderChart(chartConfig);
+                generateEmbedCodes(chartNameInput.value, chartData);
+                showToast('Chart generated successfully!');
+            } catch (error) {
+                showToast('Error generating chart: ' + error.message, 'error');
+            }
+        }
+
+        // Event listeners
+        generateBtn.addEventListener('click', generateChart);
+        saveBtn.addEventListener('click', saveChart);
+        
+        // --- Auto-update chart on form changes ---
+        const debouncedGenerate = (() => {
+            let timeout;
+            return () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(generateChart, 300);
+            };
+        })();
+
+        const autoUpdateInputs = [
+            chartTypeSelect,
+            chartTitleInput,
+            chartLabelsInput,
+            chartDatasetInput,
+            xAxisLabelInput,
+            yAxisLabelInput,
+            roundedBordersSlider,
+            barSpacingSlider,
+            backgroundColorInput,
+            borderColorInput
+        ];
+
+        autoUpdateInputs.forEach(el => el.addEventListener('input', debouncedGenerate));
+        showValuesCheckbox.addEventListener('change', generateChart);
+        
+        clearBtn.addEventListener('click', () => {
+            chartNameInput.value = '';
+            chartTypeSelect.value = 'bar';
+            chartTitleInput.value = '';
+            chartLabelsInput.value = '';
+            chartDatasetInput.value = '';
+            backgroundColorInput.value = '#36a2eb';
+            borderColorInput.value = '#36a2eb';
+            chartConfigTextarea.value = '';
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+            iframeCode.value = '';
+            imageCode.value = '';
+        });
+        
+        dashboardBtn.addEventListener('click', () => {
+            editorView.classList.add('hidden');
+            createDashboardView.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+            editorBtn.classList.remove('hidden');
+            createDashboardBtn.classList.remove('hidden');
+            dashboardBtn.classList.add('hidden');
+            renderDashboard();
+        });
+        
+        createDashboardBtn.addEventListener('click', () => {
+            editorView.classList.add('hidden');
+            dashboardView.classList.add('hidden');
+            createDashboardView.classList.remove('hidden');
+            editorBtn.classList.remove('hidden');
+            dashboardBtn.classList.remove('hidden');
+            createDashboardBtn.classList.add('hidden');
+            renderChartSelection();
+            updateDashboardPreview();
+        });
+        
+        editorBtn.addEventListener('click', () => {
+            dashboardView.classList.add('hidden');
+            createDashboardView.classList.add('hidden');
+            editorView.classList.remove('hidden');
+            dashboardBtn.classList.remove('hidden');
+            createDashboardBtn.classList.remove('hidden');
+            editorBtn.classList.add('hidden');
+        });
+        
+        copyIframeBtn.addEventListener('click', () => {
+            iframeCode.select();
+            document.execCommand('copy');
+            showToast('iFrame code copied to clipboard!');
+        });
+        
+        copyImageBtn.addEventListener('click', () => {
+            imageCode.select();
+            document.execCommand('copy');
+            showToast('Image code copied to clipboard!');
+        });
+        
+        // Dashboard event listeners
+        saveDashboardBtn.addEventListener('click', saveDashboard);
+        exportDashboardBtn.addEventListener('click', exportDashboardHTML);
+        
+        dashboardLayout.addEventListener('change', updateDashboardPreview);
+        dashboardTheme.addEventListener('change', updateDashboardPreview);
+
+        // Handle embed mode
+        function handleEmbedMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isEmbed = urlParams.get('embed');
+            const embedName = urlParams.get('name');
+            const embedData = urlParams.get('data');
+            
+            if (isEmbed === 'true' && embedData) {
+                // Hide navigation and show only chart
+                document.querySelector('nav').style.display = 'none';
+                document.querySelector('.max-w-7xl').innerHTML = `
+                    <div class="chart-container">
+                        <canvas id="chartCanvas"></canvas>
+                    </div>
+                `;
+                
+                try {
+                    // Generate and render chart
+                    const chartData = JSON.parse(decodeURIComponent(embedData));
+                    const chartConfig = generateChartConfig(chartData);
+                    renderChart(chartConfig);
+                } catch (error) {
+                    console.error('Error parsing embed data:', error);
+                }
+            }
+        }
+
+        // Dashboard Functions
+        function renderChartSelection() {
+            if (savedCharts.length === 0) {
+                chartSelectionGrid.innerHTML = '';
+                noChartsForDashboard.classList.remove('hidden');
+            } else {
+                noChartsForDashboard.classList.add('hidden');
+                chartSelectionGrid.innerHTML = savedCharts.map(chart => {
+                    const isSelected = selectedCharts.includes(chart.id);
+                    let chartInfo = '';
+                    if (chart.chartData) {
+                        chartInfo = `${chart.chartData.chartType} chart: ${chart.chartData.title}`;
+                    } else if (chart.config) {
+                        chartInfo = chart.config.substring(0, 50) + (chart.config.length > 50 ? '...' : '');
+                    }
+                    
+                    return `<div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-blue-300' : ''}" data-chart-id="${chart.id}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900">${chart.name}</h4>
+                                <p class="text-sm text-gray-600 mt-1">${chartInfo}</p>
+                                <p class="text-xs text-gray-500 mt-2">Created: ${new Date(chart.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <div class="ml-2">
+                                <div class="w-5 h-5 rounded border-2 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'} flex items-center justify-center">
+                                    ${isSelected ? '<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function toggleChartSelection(chartId) {
+            const index = selectedCharts.indexOf(chartId);
+            if (index > -1) {
+                selectedCharts.splice(index, 1);
+            } else {
+                selectedCharts.push(chartId);
+            }
+            renderChartSelection();
+            updateDashboardPreview();
+        }
+
+        function updateDashboardPreview() {
+            const layout = dashboardLayout.value;
+            const theme = dashboardTheme.value;
+            
+            // Update grid layout
+            let gridClass = 'grid gap-4';
+            switch (layout) {
+                case '2x2':
+                    gridClass += ' grid-cols-2';
+                    break;
+                case '3x2':
+                    gridClass += ' grid-cols-3';
+                    break;
+                case '2x3':
+                    gridClass += ' grid-cols-2';
+                    break;
+                case '1x4':
+                    gridClass += ' grid-cols-1';
+                    break;
+            }
+            
+            dashboardGrid.className = gridClass;
+            
+            // Update theme
+            dashboardPreview.className = `border border-gray-200 rounded-lg p-4 min-h-96 transition-colors ${
+                theme === 'dark' ? 'bg-gray-800 text-white' : 
+                theme === 'blue' ? 'bg-blue-50' : 'bg-gray-50'
+            }`;
+            
+            // Render selected charts
+            dashboardGrid.innerHTML = '';
+            dashboardCharts = [];
+            
+            selectedCharts.forEach((chartId, index) => {
+                const chart = savedCharts.find(c => c.id === chartId);
+                if (chart) {
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'bg-white rounded-lg shadow-sm border p-4';
+                    chartContainer.innerHTML = `
+                        <h4 class="font-medium text-gray-900 mb-2">${chart.name}</h4>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="dashboardChart${index}"></canvas>
+                        </div>
+                    `;
+                    dashboardGrid.appendChild(chartContainer);
+                    
+                    // Store chart data for rendering
+                    dashboardCharts.push({
+                        id: chartId,
+                        chart: chart,
+                        canvasId: `dashboardChart${index}`
+                    });
+                }
+            });
+            
+            // Render charts after DOM is updated
+            setTimeout(() => {
+                renderDashboardCharts();
+            }, 100);
+        }
+
+        function renderDashboardCharts() {
+            dashboardCharts.forEach(({ chart, canvasId }) => {
+                const canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    
+                    let chartData;
+                    if (chart.chartData) {
+                        chartData = chart.chartData;
+                    } else if (chart.config) {
+                        // Legacy format - parse the config
+                        const lines = chart.config.split('\n').filter(line => line.trim());
+                        const parsedData = {};
+                        lines.forEach(line => {
+                            const [key, ...valueParts] = line.split(':');
+                            if (key && valueParts.length > 0) {
+                                const value = valueParts.join(':').trim();
+                                parsedData[key.trim()] = value;
+                            }
+                        });
+                        
+                        chartData = {
+                            chartType: (parsedData['chart type'] || 'bar').toLowerCase(),
+                            title: parsedData.title || '',
+                            labels: parsedData.labels ? parsedData.labels.split(',').map(l => l.trim()) : [],
+                            dataset: parsedData.dataset ? parsedData.dataset.split(',').map(d => parseFloat(d.trim()) || 0) : [],
+                            backgroundColor: '#36a2eb',
+                            borderColor: '#36a2eb'
+                        };
+                    }
+                    
+                    if (chartData) {
+                        const config = generateChartConfig(chartData);
+                        new Chart(ctx, config);
+                    }
+                }
+            });
+        }
+
+        function saveDashboard() {
+            const title = dashboardTitle.value.trim();
+            if (!title) {
+                showToast('Please enter a dashboard title', 'error');
+                return;
+            }
+            
+            if (selectedCharts.length === 0) {
+                showToast('Please select at least one chart', 'error');
+                return;
+            }
+            
+            const dashboardData = {
+                id: Date.now(),
+                title: title,
+                layout: dashboardLayout.value,
+                theme: dashboardTheme.value,
+                chartIds: selectedCharts,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Check if dashboard with same name exists
+            const existingIndex = savedDashboards.findIndex(d => d.title === title);
+            if (existingIndex !== -1) {
+                savedDashboards[existingIndex] = dashboardData;
+            } else {
+                savedDashboards.push(dashboardData);
+            }
+            
+            localStorage.setItem('vizmarkdown_dashboards', JSON.stringify(savedDashboards));
+            showToast('Dashboard saved successfully!');
+        }
+
+        function exportDashboardHTML() {
+            const title = dashboardTitle.value.trim();
+            if (!title || selectedCharts.length === 0) {
+                showToast('Please configure and save the dashboard first', 'error');
+                return;
+            }
+            const selectedChartsData = selectedCharts.map(function(chartId) {
+                return savedCharts.find(function(c) { return c.id === chartId; });
+            }).filter(Boolean);
+            const layout = dashboardLayout.value;
+            const theme = dashboardTheme.value;
+            let gridClass = 'grid gap-4';
+            switch (layout) {
+                case '2x2': gridClass += ' grid-cols-2'; break;
+                case '3x2': gridClass += ' grid-cols-3'; break;
+                case '2x3': gridClass += ' grid-cols-2'; break;
+                case '1x4': gridClass += ' grid-cols-1'; break;
+            }
+            const themeClass = theme === 'dark' ? 'bg-gray-800 text-white' : theme === 'blue' ? 'bg-blue-50' : 'bg-gray-50';
+            var chartSections = '';
+            selectedChartsData.forEach(function(chart, index) {
+                chartSections += '<div class="bg-white rounded-lg shadow-sm border p-4">' +
+                    '<h4 class="font-medium text-gray-900 mb-2">' + chart.name + '</h4>' +
+                    '<div class="chart-container" style="height: 200px;">' +
+                    '<canvas id="chart' + index + '"></canvas>' +
+                    '</div>' +
+                    '</div>';
+            });
+            const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"><\/script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">${title}</h1>
+    <div class="${themeClass} rounded-lg p-6">
+      <div class="${gridClass}">
+        ${chartSections}
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_dashboard.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Dashboard HTML exported successfully!');
+        }
+
+        // After DOMContentLoaded, add this event delegation:
+        chartSelectionGrid.addEventListener('click', function(e) {
+            let card = e.target.closest('[data-chart-id]');
+            if (card) {
+                const chartId = parseInt(card.getAttribute('data-chart-id'), 10);
+                toggleChartSelection(chartId);
+            }
+        });
+
+        // Initialize
+        handleEmbedMode();
+        generateChart();
+    });
+    </script>
+</body>
+</html>
