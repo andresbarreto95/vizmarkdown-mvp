@@ -187,4 +187,4 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Built with ❤️ for content creators who need fast, simple chart creation.** 
+**Built with ❤️ for content creators who need fast, simple chart creation.**
