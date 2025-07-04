@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VizMarkdown - Create Charts with Simple Text</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -109,12 +112,31 @@
                             <input type="range" id="barSpacing" min="0" max="1" step="0.05" value="0.1" class="w-full">
                         </div>
                         
+                        <!-- Font Options -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Font</label>
+                            <div class="flex items-center space-x-2">
+                                <select id="fontFamily" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="'Inter', sans-serif">Inter</option>
+                                    <option value="'Roboto', sans-serif">Roboto</option>
+                                    <option value="Arial, sans-serif">Arial</option>
+                                </select>
+                                <button id="fontBold" title="Bold" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-semibold">B</button>
+                                <button id="fontItalic" title="Italic" class="px-3 py-2 border border-gray-300 rounded-md text-sm italic">I</button>
+                            </div>
+                        </div>
+
+                        <!-- Chart Colors -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Chart Colors</label>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-3 gap-2">
                                 <div>
-                                    <label class="block text-xs text-gray-600 mb-1">Background Color</label>
-                                    <input type="color" id="backgroundColor" value="#36a2eb" class="w-full h-10 border border-gray-300 rounded-md cursor-pointer">
+                                    <label class="block text-xs text-gray-600 mb-1">Chart Area</label>
+                                    <input type="color" id="chartAreaColor" value="#ffffff" class="w-full h-10 border border-gray-300 rounded-md cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Fill Color</label>
+                                    <input type="color" id="fillColor" value="#36a2eb" class="w-full h-10 border border-gray-300 rounded-md cursor-pointer">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-600 mb-1">Border Color</label>
@@ -274,7 +296,11 @@
         const chartTitleInput = document.getElementById('chartTitle');
         const chartLabelsInput = document.getElementById('chartLabels');
         const chartDatasetInput = document.getElementById('chartDataset');
-        const backgroundColorInput = document.getElementById('backgroundColor');
+        const fillColorInput = document.getElementById('fillColor');
+        const chartAreaColorInput = document.getElementById('chartAreaColor');
+        const fontFamilySelect = document.getElementById('fontFamily');
+        const fontBoldBtn = document.getElementById('fontBold');
+        const fontItalicBtn = document.getElementById('fontItalic');
         const borderColorInput = document.getElementById('borderColor');
         const chartConfigTextarea = document.getElementById('chartConfig');
         const generateBtn = document.getElementById('generateBtn');
@@ -315,8 +341,12 @@
         chartTitleInput.value = 'Sales Performance';
         chartLabelsInput.value = 'Q1, Q2, Q3, Q4';
         chartDatasetInput.value = 'Series A, 120, 190, 300, 500';
-        backgroundColorInput.value = '#36a2eb';
+        fillColorInput.value = '#36a2eb';
         borderColorInput.value = '#36a2eb';
+        chartAreaColorInput.value = '#ffffff';
+        fontFamilySelect.value = "'Inter', sans-serif";
+        fontBoldBtn.classList.remove('bg-gray-300');
+        fontItalicBtn.classList.remove('bg-gray-300');
 
         // Register data-labels plugin if available
         if (window.ChartDataLabels) {
@@ -344,8 +374,12 @@
                 dataset,
                 chartType: chartTypeSelect.value,
                 title: chartTitleInput.value,
-                backgroundColor: backgroundColorInput.value,
+                fillColor: fillColorInput.value,
                 borderColor: borderColorInput.value,
+                chartAreaColor: chartAreaColorInput.value,
+                fontFamily: fontFamilySelect.value,
+                fontBold: fontBoldBtn.classList.contains('bg-gray-300'),
+                fontItalic: fontItalicBtn.classList.contains('bg-gray-300'),
                 xAxisLabel: xAxisLabelInput.value,
                 yAxisLabel: yAxisLabelInput.value,
                 showValues: showValuesCheckbox.checked,
@@ -356,7 +390,7 @@
 
         // Generate Chart.js configuration
         function generateChartConfig(chartData) {
-            const { labels, datasets, dataset, chartType, title, backgroundColor, borderColor, xAxisLabel, yAxisLabel, showValues, roundedBorders, barSpacing } = chartData;
+            const { labels, datasets, dataset, chartType, title, fillColor, borderColor, chartAreaColor, fontFamily, fontBold, fontItalic, xAxisLabel, yAxisLabel, showValues, roundedBorders, barSpacing } = chartData;
 
             const genColors = (base, count, alpha = 0.6) => {
                 const out = [];
@@ -370,7 +404,7 @@
 
             let dsConfig;
             if (datasets && datasets.length) {
-                const fills = genColors(backgroundColor, datasets.length, 0.6);
+                const fills = genColors(fillColor, datasets.length, 0.6);
                 const borders = genColors(borderColor, datasets.length, 1);
                 dsConfig = datasets.map((ds, i) => ({
                     label: ds.label || `Series ${i + 1}`,
@@ -384,7 +418,7 @@
                 dsConfig = [{
                     label: title || 'Dataset',
                     data: dataset,
-                    backgroundColor: genColors(backgroundColor, dataset.length, 0.6),
+                    backgroundColor: genColors(fillColor, dataset.length, 0.6),
                     borderColor: genColors(borderColor, dataset.length, 1),
                     borderWidth: 2
                 }];
@@ -398,7 +432,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         datalabels: { display: showValues, color: '#000', anchor: 'end', align: 'top' },
-                        title: { display: true, text: title || 'Chart Title', font: { size: 16 } },
+                        title: { display: true, text: title || 'Chart Title', font: { size: 16, family: fontFamily, weight: fontBold ? 'bold' : 'normal', style: fontItalic ? 'italic' : 'normal' } },
                         legend: { display: true, position: 'top' }
                     },
                     scales: (chartType !== 'pie' && chartType !== 'doughnut' && chartType !== 'polarArea') ? {
@@ -449,7 +483,7 @@
 
         // Generate embed codes
         function generateEmbedCodes(chartName, chartData) {
-            const currentUrl = window.location.href;
+            const currentUrl = window.location.origin + window.location.pathname;
             const encodedData = encodeURIComponent(JSON.stringify(chartData));
             const encodedName = encodeURIComponent(chartName);
             
@@ -522,8 +556,12 @@
                     chartTitleInput.value = chart.chartData.title || '';
                     chartLabelsInput.value = chart.chartData.labels.join(', ');
                     chartDatasetInput.value = chart.chartData.dataset.join(', ');
-                    backgroundColorInput.value = chart.chartData.backgroundColor || '#36a2eb';
+                    fillColorInput.value = chart.chartData.fillColor || '#36a2eb';
                     borderColorInput.value = chart.chartData.borderColor || '#36a2eb';
+                    chartAreaColorInput.value = chart.chartData.chartAreaColor || '#ffffff';
+                    fontFamilySelect.value = chart.chartData.fontFamily || "'Inter', sans-serif";
+                    fontBoldBtn.classList.toggle('bg-gray-300', chart.chartData.fontBold);
+                    fontItalicBtn.classList.toggle('bg-gray-300', chart.chartData.fontItalic);
                 } else if (chart.config) {
                     // Legacy format - parse the config string
                     const lines = chart.config.split('\n').filter(line => line.trim());
@@ -608,6 +646,8 @@
             try {
                 const chartConfig = generateChartConfig(chartData);
                 renderChart(chartConfig);
+                // Apply chart area background to canvas
+                document.getElementById('chartCanvas').style.backgroundColor = chartData.chartAreaColor || '#ffffff';
                 generateEmbedCodes(chartNameInput.value, chartData);
                 showToast('Chart generated successfully!');
             } catch (error) {
@@ -637,12 +677,19 @@
             yAxisLabelInput,
             roundedBordersSlider,
             barSpacingSlider,
-            backgroundColorInput,
-            borderColorInput
+            fillColorInput,
+            borderColorInput,
+            chartAreaColorInput,
+            fontFamilySelect
         ];
 
         autoUpdateInputs.forEach(el => el.addEventListener('input', debouncedGenerate));
         showValuesCheckbox.addEventListener('change', generateChart);
+        
+        // Font style toggles
+        const toggleBtn = (btn) => { btn.classList.toggle('bg-gray-300'); generateChart(); };
+        fontBoldBtn.addEventListener('click', () => toggleBtn(fontBoldBtn));
+        fontItalicBtn.addEventListener('click', () => toggleBtn(fontItalicBtn));
         
         clearBtn.addEventListener('click', () => {
             chartNameInput.value = '';
@@ -650,8 +697,12 @@
             chartTitleInput.value = '';
             chartLabelsInput.value = '';
             chartDatasetInput.value = '';
-            backgroundColorInput.value = '#36a2eb';
+            fillColorInput.value = '#36a2eb';
             borderColorInput.value = '#36a2eb';
+            chartAreaColorInput.value = '#ffffff';
+            fontFamilySelect.value = "'Inter', sans-serif";
+            fontBoldBtn.classList.remove('bg-gray-300');
+            fontItalicBtn.classList.remove('bg-gray-300');
             chartConfigTextarea.value = '';
             if (currentChart) {
                 currentChart.destroy();
@@ -710,29 +761,36 @@
         dashboardLayout.addEventListener('change', updateDashboardPreview);
         dashboardTheme.addEventListener('change', updateDashboardPreview);
 
-        // Handle embed mode
+        // === Embed Mode Handler (replaced) ===
         function handleEmbedMode() {
             const urlParams = new URLSearchParams(window.location.search);
             const isEmbed = urlParams.get('embed');
-            const embedName = urlParams.get('name');
             const embedData = urlParams.get('data');
-            
+
             if (isEmbed === 'true' && embedData) {
-                // Hide navigation and show only chart
-                document.querySelector('nav').style.display = 'none';
-                document.querySelector('.max-w-7xl').innerHTML = `
-                    <div class="chart-container">
-                        <canvas id="chartCanvas"></canvas>
-                    </div>
-                `;
-                
+                // 1. Clear the entire body
+                document.body.innerHTML = '';
+
+                // 2. Center the chart and make background transparent
+                document.body.className = 'w-screen h-screen flex items-center justify-center bg-transparent p-4';
+
+                // 3. Add a single chart container
+                const chartContainer = document.createElement('div');
+                chartContainer.className = 'chart-container';
+                chartContainer.style.height = '100%';
+                chartContainer.innerHTML = '<canvas id="chartCanvas"></canvas>';
+                document.body.appendChild(chartContainer);
+
+                // 4. Generate and render chart
                 try {
-                    // Generate and render chart
                     const chartData = JSON.parse(decodeURIComponent(embedData));
                     const chartConfig = generateChartConfig(chartData);
-                    renderChart(chartConfig);
+                    const canvas = document.getElementById('chartCanvas');
+                    const ctx = canvas.getContext('2d');
+                    new Chart(ctx, chartConfig);
                 } catch (error) {
                     console.error('Error parsing embed data:', error);
+                    document.body.innerHTML = '<p style="font-family: sans-serif; color: red;">Error: Could not load chart data.</p>';
                 }
             }
         }
@@ -869,8 +927,17 @@
                             title: parsedData.title || '',
                             labels: parsedData.labels ? parsedData.labels.split(',').map(l => l.trim()) : [],
                             dataset: parsedData.dataset ? parsedData.dataset.split(',').map(d => parseFloat(d.trim()) || 0) : [],
-                            backgroundColor: '#36a2eb',
-                            borderColor: '#36a2eb'
+                            fillColor: '#36a2eb',
+                            borderColor: '#36a2eb',
+                            chartAreaColor: '#ffffff',
+                            fontFamily: parsedData.fontFamily || "'Inter', sans-serif",
+                            fontBold: parsedData.fontBold === 'true',
+                            fontItalic: parsedData.fontItalic === 'true',
+                            xAxisLabel: parsedData.xAxisLabel || '',
+                            yAxisLabel: parsedData.yAxisLabel || '',
+                            showValues: parsedData.showValues === 'true',
+                            roundedBorders: parseInt(parsedData.roundedBorders) || 0,
+                            barSpacing: parseFloat(parsedData.barSpacing) || 0
                         };
                     }
                     
