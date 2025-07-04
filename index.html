@@ -651,24 +651,37 @@
         }
 
         // Generate chart
-        function generateChart() {
-            console.log('Generate Chart button clicked');
-            const chartData = getChartData();
-            
-            if (!chartData.title || chartData.labels.length === 0 || chartData.dataset.length === 0) {
-                showToast('Please provide title, labels, and dataset', 'error');
-                return;
-            }
-            
+        async function generateChart() {
             try {
-                const chartConfig = generateChartConfig(chartData);
-                renderChart(chartConfig);
+                const chartData = getChartData();
+                const config = generateChartConfig(chartData);
+                
+                // Clear existing chart
+                const ctx = document.getElementById('chartCanvas').getContext('2d');
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+                
+                // Create new chart
+                currentChart = new Chart(ctx, config);
+                
+                // Generate embed URL
+                const baseUrl = window.location.origin + window.location.pathname;
+                const embedUrl = `${baseUrl}?embed=true&name=${encodeURIComponent(chartData.name || '')}&data=${encodeURIComponent(JSON.stringify(chartData))}`;
+                
+                // Update embed URL field
+                const embedUrlField = document.getElementById('embedUrl');
+                if (embedUrlField) {
+                    embedUrlField.value = embedUrl;
+                }
+                
                 // Apply chart area background to canvas
                 document.getElementById('chartCanvas').style.backgroundColor = chartData.chartAreaColor || '#ffffff';
-                generateEmbedCodes();
+                
                 showToast('Chart generated successfully!');
             } catch (error) {
-                showToast('Error generating chart: ' + error.message, 'error');
+                console.error('Error generating chart:', error);
+                showToast('Error generating chart', 'error');
             }
         }
 
