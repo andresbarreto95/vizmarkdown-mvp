@@ -774,37 +774,28 @@
             const embedData = urlParams.get('data');
 
             if (isEmbed === 'true' && embedData) {
-                // 1. Identify UI elements to hide
-                const navElement = document.querySelector('nav');
-                const mainContentElement = document.querySelector('.max-w-7xl');
-
-                // 2. Hide them (preserve in DOM for script dependencies)
-                if (navElement) navElement.style.display = 'none';
-                if (mainContentElement) mainContentElement.style.display = 'none';
-
-                // 3. Style body to center chart
-                document.body.className = 'w-screen h-screen flex items-center justify-center bg-transparent p-4';
-
-                // 4. Create container for embedded chart
-                const embedContainer = document.createElement('div');
-                embedContainer.className = 'chart-container';
-                embedContainer.style.height = '100%';
-                embedContainer.innerHTML = '<canvas id="embeddedChartCanvas"></canvas>';
-                document.body.appendChild(embedContainer);
-
-                // 5. Generate and render chart
+                // Remove all body children
+                document.body.innerHTML = '';
+                // Remove all body styles
+                document.body.className = '';
+                document.body.style = '';
+                // Create only the chart canvas, full viewport
+                const embedCanvas = document.createElement('canvas');
+                embedCanvas.id = 'embeddedChartCanvas';
+                embedCanvas.style.display = 'block';
+                embedCanvas.style.width = '100vw';
+                embedCanvas.style.height = '100vh';
+                embedCanvas.style.maxWidth = '100vw';
+                embedCanvas.style.maxHeight = '100vh';
+                document.body.appendChild(embedCanvas);
+                // Render chart
                 try {
                     const chartData = JSON.parse(decodeURIComponent(embedData));
                     const chartConfig = generateChartConfig(chartData);
-
-                    const canvas = document.getElementById('embeddedChartCanvas');
-                    const ctx = canvas.getContext('2d');
-
+                    const ctx = embedCanvas.getContext('2d');
                     new Chart(ctx, chartConfig);
-
                 } catch (error) {
-                    console.error('Error parsing embed data:', error);
-                    embedContainer.innerHTML = '<p style="font-family: sans-serif; color: red;">Error: Could not load chart data.</p>';
+                    document.body.innerHTML = '<p style="font-family: sans-serif; color: red;">Error: Could not load chart data.</p>';
                 }
             }
         }
