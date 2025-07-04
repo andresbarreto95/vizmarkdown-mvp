@@ -295,26 +295,32 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Global variables
         let currentChart = null;
-        let savedCharts = JSON.parse(localStorage.getItem('vizmarkdown_charts') || '[]');
-        let savedDashboards = JSON.parse(localStorage.getItem('vizmarkdown_dashboards') || '[]');
+        const savedCharts = JSON.parse(localStorage.getItem('vizmarkdown_charts') || '[]');
+        const savedDashboards = JSON.parse(localStorage.getItem('vizmarkdown_dashboards') || '[]');
         let selectedCharts = [];
         let dashboardCharts = [];
 
-        // DOM elements
+        // Initialize Chart.js
+        Chart.register(ChartDataLabels);
+        
+        // Get form elements
         const chartNameInput = document.getElementById('chartName');
         const chartTypeSelect = document.getElementById('chartType');
         const chartTitleInput = document.getElementById('chartTitle');
         const chartLabelsInput = document.getElementById('chartLabels');
         const chartDatasetInput = document.getElementById('chartDataset');
-        const fillColorInput = document.getElementById('fillColor');
-        const chartAreaColorInput = document.getElementById('chartAreaColor');
+        const xAxisLabelInput = document.getElementById('xAxisLabel');
+        const yAxisLabelInput = document.getElementById('yAxisLabel');
+        const showValuesCheckbox = document.getElementById('showValues');
+        const roundedBordersInput = document.getElementById('roundedBorders');
+        const barSpacingInput = document.getElementById('barSpacing');
         const fontFamilySelect = document.getElementById('fontFamily');
         const fontBoldBtn = document.getElementById('fontBold');
         const fontItalicBtn = document.getElementById('fontItalic');
+        const chartAreaColorInput = document.getElementById('chartAreaColor');
+        const fillColorInput = document.getElementById('fillColor');
         const borderColorInput = document.getElementById('borderColor');
-        const chartConfigTextarea = document.getElementById('chartConfig');
         const generateBtn = document.getElementById('generateBtn');
         const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
@@ -339,331 +345,120 @@
         const copyImageBtn = document.getElementById('copyImageBtn');
         const toast = document.getElementById('toast');
         const toastMessage = document.getElementById('toastMessage');
-        const xAxisLabelInput = document.getElementById('xAxisLabel');
-        const yAxisLabelInput = document.getElementById('yAxisLabel');
-        const showValuesCheckbox = document.getElementById('showValues');
-        const roundedBordersSlider = document.getElementById('roundedBorders');
-        const barSpacingSlider = document.getElementById('barSpacing');
         const downloadImageBtn = document.getElementById('downloadImageBtn');
 
-        // Initialize with sample data
-        chartNameInput.value = 'Sample Sales Chart';
-        chartTypeSelect.value = 'bar';
-        chartTitleInput.value = 'Sales Performance';
-        chartLabelsInput.value = 'Q1, Q2, Q3, Q4';
-        chartDatasetInput.value = 'Series A, 120, 190, 300, 500';
-        fillColorInput.value = '#36a2eb';
-        borderColorInput.value = '#36a2eb';
-        chartAreaColorInput.value = '#ffffff';
-        fontFamilySelect.value = "'Inter', sans-serif";
-        fontBoldBtn.classList.remove('bg-gray-300');
-        fontItalicBtn.classList.remove('bg-gray-300');
+        // Add input event listeners for auto-generation
+        const inputs = [
+            chartNameInput, chartTypeSelect, chartTitleInput, chartLabelsInput,
+            chartDatasetInput, xAxisLabelInput, yAxisLabelInput, showValuesCheckbox,
+            roundedBordersInput, barSpacingInput, fontFamilySelect,
+            chartAreaColorInput, fillColorInput, borderColorInput
+        ];
 
-        // Register data-labels plugin if available
-        if (window.ChartDataLabels) {
-            Chart.register(ChartDataLabels);
+        inputs.forEach(input => {
+            input.addEventListener('input', debounce(generateChart, 500));
+        });
+
+        // Debounce function to prevent too frequent updates
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
         }
 
-        // Get chart data from form fields
+        // Get chart data from form
         function getChartData() {
-            const labels = chartLabelsInput.value.split(',').map(l => l.trim()).filter(Boolean);
-            const lines = chartDatasetInput.value.split('\n').map(l => l.trim()).filter(Boolean);
-            const datasets = [];
-            lines.forEach((line, idx) => {
-                const parts = line.split(',').map(p => p.trim());
-                if (parts.length < 2) return;
-                const label = parts.shift();
-                const data = parts.map(p => parseFloat(p) || 0);
-                datasets.push({ label, data });
+            const labels = chartLabelsInput.value.split(',').map(label => label.trim());
+            const datasetLines = chartDatasetInput.value.split('\n');
+            const datasets = datasetLines.map(line => {
+                const values = line.split(',').map(val => val.trim());
+                const name = values[0];
+                const data = values.slice(1).map(Number);
+                return {
+                    label: name,
+                    data: data,
+                    fill: true,
+                    backgroundColor: fillColorInput.value,
+                    borderColor: borderColorInput.value,
+                    tension: 0.4
+                };
             });
-            // First series for legacy checks
-            const dataset = datasets.length ? datasets[0].data : [];
 
             return {
-                labels,
-                datasets,
-                dataset,
+                name: chartNameInput.value,
                 chartType: chartTypeSelect.value,
                 title: chartTitleInput.value,
-                fillColor: fillColorInput.value,
-                borderColor: borderColorInput.value,
-                chartAreaColor: chartAreaColorInput.value,
-                fontFamily: fontFamilySelect.value,
-                fontBold: fontBoldBtn.classList.contains('bg-gray-300'),
-                fontItalic: fontItalicBtn.classList.contains('bg-gray-300'),
+                labels: labels,
+                datasets: datasets,
                 xAxisLabel: xAxisLabelInput.value,
                 yAxisLabel: yAxisLabelInput.value,
                 showValues: showValuesCheckbox.checked,
-                roundedBorders: parseInt(roundedBordersSlider.value, 10) || 0,
-                barSpacing: parseFloat(barSpacingSlider.value) || 0
+                roundedBorders: parseInt(roundedBordersInput.value),
+                barSpacing: parseFloat(barSpacingInput.value),
+                fontFamily: fontFamilySelect.value,
+                fontBold: fontBoldBtn.classList.contains('bg-gray-200'),
+                fontItalic: fontItalicBtn.classList.contains('bg-gray-200'),
+                chartAreaColor: chartAreaColorInput.value,
+                fillColor: fillColorInput.value,
+                borderColor: borderColorInput.value
             };
         }
 
-        // Generate Chart.js configuration
+        // Generate chart configuration
         function generateChartConfig(chartData) {
-            const { labels, datasets, dataset, chartType, title, fillColor, borderColor, chartAreaColor, fontFamily, fontBold, fontItalic, xAxisLabel, yAxisLabel, showValues, roundedBorders, barSpacing } = chartData;
-
-            const genColors = (base, count, alpha = 0.6) => {
-                const out = [];
-                for (let i = 0; i < count; i++) {
-                    const hue = (i * 40) % 360;
-                    const rgb = hslToRgb(hue / 360, 0.7, 0.6);
-                    out.push(`rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`);
-                }
-                return out;
-            };
-
-            let dsConfig;
-            if (datasets && datasets.length) {
-                const fills = genColors(fillColor, datasets.length, 0.6);
-                const borders = genColors(borderColor, datasets.length, 1);
-                dsConfig = datasets.map((ds, i) => ({
-                    label: ds.label || `Series ${i + 1}`,
-                    data: ds.data,
-                    backgroundColor: fills[i],
-                    borderColor: borders[i],
-                    borderWidth: 2,
-                    ...(chartType === 'bar' ? { borderRadius: roundedBorders, barPercentage: 1 - barSpacing, categoryPercentage: 1 - barSpacing } : {})
-                }));
-            } else {
-                dsConfig = [{
-                    label: title || 'Dataset',
-                    data: dataset,
-                    backgroundColor: genColors(fillColor, dataset.length, 0.6),
-                    borderColor: genColors(borderColor, dataset.length, 1),
-                    borderWidth: 2
-                }];
-            }
-
             return {
-                type: chartType,
-                data: { labels, datasets: dsConfig },
+                type: chartData.chartType,
+                data: {
+                    labels: chartData.labels,
+                    datasets: chartData.datasets
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        datalabels: { display: showValues, color: '#000', anchor: 'end', align: 'top' },
-                        title: { display: true, text: title || 'Chart Title', font: { size: 16, family: fontFamily, weight: fontBold ? 'bold' : 'normal', style: fontItalic ? 'italic' : 'normal' } },
-                        legend: { display: true, position: 'top' }
+                        title: {
+                            display: !!chartData.title,
+                            text: chartData.title,
+                            font: {
+                                size: 16,
+                                family: chartData.fontFamily,
+                                weight: chartData.fontBold ? 'bold' : 'normal',
+                                style: chartData.fontItalic ? 'italic' : 'normal'
+                            }
+                        },
+                        datalabels: {
+                            display: chartData.showValues,
+                            color: '#666',
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
                     },
-                    scales: (chartType !== 'pie' && chartType !== 'doughnut' && chartType !== 'polarArea') ? {
-                        x: { title: { display: !!xAxisLabel, text: xAxisLabel } },
-                        y: { beginAtZero: true, title: { display: !!yAxisLabel, text: yAxisLabel } }
-                    } : undefined
-                }
-            };
-        }
-
-        // Helper function to convert HSL to RGB
-        function hslToRgb(h, s, l) {
-            let r, g, b;
-            
-            if (s === 0) {
-                r = g = b = l;
-            } else {
-                const hue2rgb = (p, q, t) => {
-                    if (t < 0) t += 1;
-                    if (t > 1) t -= 1;
-                    if (t < 1/6) return p + (q - p) * 6 * t;
-                    if (t < 1/2) return q;
-                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                    return p;
-                };
-                
-                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                const p = 2 * l - q;
-                r = hue2rgb(p, q, h + 1/3);
-                g = hue2rgb(p, q, h);
-                b = hue2rgb(p, q, h - 1/3);
-            }
-            
-            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-        }
-
-        // Render chart
-        function renderChart(config) {
-            const canvas = document.getElementById('chartCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            if (currentChart) {
-                currentChart.destroy();
-            }
-            
-            currentChart = new Chart(ctx, config);
-        }
-
-        // Generate embed codes
-        function generateEmbedCodes() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const chartData = urlParams.get('data');
-            const chartName = urlParams.get('name');
-            
-            if (chartData) {
-                const baseUrl = window.location.origin + window.location.pathname;
-                const embedUrl = `${baseUrl}?embed=true&name=${encodeURIComponent(chartName || '')}&data=${encodeURIComponent(chartData)}`;
-                
-                // Update embed URL field
-                const embedUrlField = document.getElementById('embedUrl');
-                if (embedUrlField) {
-                    embedUrlField.value = embedUrl;
-                }
-                
-                // Copy embed URL button
-                const copyEmbedBtn = document.getElementById('copyEmbedBtn');
-                if (copyEmbedBtn) {
-                    copyEmbedBtn.addEventListener('click', async function() {
-                        try {
-                            await navigator.clipboard.writeText(embedUrlField.value);
-                            showToast('Embed URL copied to clipboard!');
-                        } catch (err) {
-                            // Fallback for older browsers
-                            embedUrlField.select();
-                            document.execCommand('copy');
-                            showToast('Embed URL copied to clipboard!');
+                    scales: {
+                        x: {
+                            title: {
+                                display: !!chartData.xAxisLabel,
+                                text: chartData.xAxisLabel
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: !!chartData.yAxisLabel,
+                                text: chartData.yAxisLabel
+                            }
                         }
-                    });
-                }
-            }
-        }
-
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
-                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-            }`;
-            toastMessage.textContent = message;
-            
-            // Show toast
-            setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-            }, 100);
-            
-            // Hide toast
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-            }, 3000);
-        }
-
-        // Save chart to localStorage
-        function saveChart() {
-            const name = chartNameInput.value.trim();
-            const chartData = getChartData();
-            
-            if (!name || !chartData.title || chartData.labels.length === 0 || chartData.dataset.length === 0) {
-                showToast('Please provide chart name, title, labels, and dataset', 'error');
-                return;
-            }
-            
-            const savedChartData = {
-                id: Date.now(),
-                name: name,
-                chartData: chartData,
-                createdAt: new Date().toISOString()
-            };
-            
-            // Check if chart with same name exists
-            const existingIndex = savedCharts.findIndex(chart => chart.name === name);
-            if (existingIndex !== -1) {
-                savedCharts[existingIndex] = savedChartData;
-            } else {
-                savedCharts.push(savedChartData);
-            }
-            
-            localStorage.setItem('vizmarkdown_charts', JSON.stringify(savedCharts));
-            showToast('Chart saved successfully!');
-        }
-
-        // Load chart from localStorage
-        function loadChart(chartId) {
-            const chart = savedCharts.find(c => c.id === chartId);
-            if (chart) {
-                chartNameInput.value = chart.name;
-                
-                // Load chart data from saved chart
-                if (chart.chartData) {
-                    // New format with separate fields
-                    chartTypeSelect.value = chart.chartData.chartType || 'bar';
-                    chartTitleInput.value = chart.chartData.title || '';
-                    chartLabelsInput.value = chart.chartData.labels.join(', ');
-                    chartDatasetInput.value = chart.chartData.dataset.join(', ');
-                    fillColorInput.value = chart.chartData.fillColor || '#36a2eb';
-                    borderColorInput.value = chart.chartData.borderColor || '#36a2eb';
-                    chartAreaColorInput.value = chart.chartData.chartAreaColor || '#ffffff';
-                    fontFamilySelect.value = chart.chartData.fontFamily || "'Inter', sans-serif";
-                    fontBoldBtn.classList.toggle('bg-gray-300', chart.chartData.fontBold);
-                    fontItalicBtn.classList.toggle('bg-gray-300', chart.chartData.fontItalic);
-                } else if (chart.config) {
-                    // Legacy format - parse the config string
-                    const lines = chart.config.split('\n').filter(line => line.trim());
-                    const parsedData = {};
-                    
-                    lines.forEach(line => {
-                        const [key, ...valueParts] = line.split(':');
-                        if (key && valueParts.length > 0) {
-                            const value = valueParts.join(':').trim();
-                            parsedData[key.trim()] = value;
-                        }
-                    });
-                    
-                    chartTypeSelect.value = (parsedData['chart type'] || 'bar').toLowerCase();
-                    chartTitleInput.value = parsedData.title || '';
-                    chartLabelsInput.value = parsedData.labels || '';
-                    chartDatasetInput.value = parsedData.dataset || '';
-                }
-                
-                generateChart();
-            }
-        }
-
-        // Delete chart from localStorage
-        function deleteChart(chartId) {
-            savedCharts = savedCharts.filter(c => c.id !== chartId);
-            localStorage.setItem('vizmarkdown_charts', JSON.stringify(savedCharts));
-            renderDashboard();
-            showToast('Chart deleted successfully!');
-        }
-
-        // Render dashboard
-        function renderDashboard() {
-            if (savedCharts.length === 0) {
-                savedChartsList.innerHTML = '';
-                noChartsMessage.classList.remove('hidden');
-            } else {
-                noChartsMessage.classList.add('hidden');
-                savedChartsList.innerHTML = savedCharts.map(chart => {
-                    let chartInfo = '';
-                    if (chart.chartData) {
-                        // New format
-                        chartInfo = `${chart.chartData.chartType} chart: ${chart.chartData.title}`;
-                    } else if (chart.config) {
-                        // Legacy format
-                        chartInfo = chart.config.substring(0, 100) + (chart.config.length > 100 ? '...' : '');
                     }
-                    
-                    return `
-                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                            <div class="flex justify-between items-start">
-                                <div class="flex-1">
-                                    <h3 class="font-medium text-gray-900">${chart.name}</h3>
-                                    <p class="text-sm text-gray-500 mt-1">Created: ${new Date(chart.createdAt).toLocaleDateString()}</p>
-                                    <pre class="text-xs text-gray-600 mt-2 bg-gray-100 p-2 rounded overflow-x-auto">${chartInfo}</pre>
-                                </div>
-                                <div class="flex space-x-2 ml-4">
-                                    <button onclick="loadChart(${chart.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
-                                        Load
-                                    </button>
-                                    <button onclick="deleteChart(${chart.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors">
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
+                }
+            };
         }
 
-        // Generate chart and embed codes
+        // Generate chart
         async function generateChart() {
             try {
                 const chartData = getChartData();
@@ -687,140 +482,58 @@
                 if (embedUrlField) {
                     embedUrlField.value = embedUrl;
                 }
-
-                // Generate email static image code
-                const canvas = document.getElementById('chartCanvas');
-                const imageData = canvas.toDataURL('image/png');
-                const emailCode = `<img src="${imageData}" alt="${chartData.name || 'Chart'}" style="max-width: 100%; height: auto;" />`;
-                
-                // Update email image code field
-                const emailImageField = document.getElementById('emailImageCode');
-                if (emailImageField) {
-                    emailImageField.value = emailCode;
-                }
                 
                 // Apply chart area background to canvas
                 document.getElementById('chartCanvas').style.backgroundColor = chartData.chartAreaColor || '#ffffff';
                 
-                showToast('Chart generated successfully!');
+                showToast('Chart updated!');
             } catch (error) {
                 console.error('Error generating chart:', error);
                 showToast('Error generating chart', 'error');
             }
         }
 
-        // Add click handler for email copy button
-        document.getElementById('copyEmailBtn').addEventListener('click', async function() {
-            const emailImageField = document.getElementById('emailImageCode');
-            try {
-                await navigator.clipboard.writeText(emailImageField.value);
-                showToast('Email code copied to clipboard!');
-            } catch (err) {
-                // Fallback for older browsers
-                emailImageField.select();
-                document.execCommand('copy');
-                showToast('Email code copied to clipboard!');
+        // Download image functionality
+        downloadImageBtn.addEventListener('click', function() {
+            if (!currentChart) {
+                showToast('Please generate a chart first', 'error');
+                return;
             }
+            const canvas = document.getElementById('chartCanvas');
+            const chartName = chartNameInput.value || 'chart';
+            const link = document.createElement('a');
+            link.download = `${chartName}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('Chart downloaded successfully!');
         });
 
-        // Event listeners
+        // Generate button click handler
         generateBtn.addEventListener('click', generateChart);
-        saveBtn.addEventListener('click', saveChart);
-        
-        // --- Auto-update chart on form changes ---
-        const debouncedGenerate = (() => {
-            let timeout;
-            return () => {
-                clearTimeout(timeout);
-                timeout = setTimeout(generateChart, 300);
-            };
-        })();
 
-        const autoUpdateInputs = [
-            chartTypeSelect,
-            chartTitleInput,
-            chartLabelsInput,
-            chartDatasetInput,
-            xAxisLabelInput,
-            yAxisLabelInput,
-            roundedBordersSlider,
-            barSpacingSlider,
-            fillColorInput,
-            borderColorInput,
-            chartAreaColorInput,
-            fontFamilySelect
-        ];
+        // Initial chart generation
+        generateChart();
 
-        autoUpdateInputs.forEach(el => el.addEventListener('input', debouncedGenerate));
-        showValuesCheckbox.addEventListener('change', generateChart);
-        
-        // Font style toggles
-        const toggleBtn = (btn) => { btn.classList.toggle('bg-gray-300'); generateChart(); };
-        fontBoldBtn.addEventListener('click', () => toggleBtn(fontBoldBtn));
-        fontItalicBtn.addEventListener('click', () => toggleBtn(fontItalicBtn));
-        
-        clearBtn.addEventListener('click', () => {
-            chartNameInput.value = '';
-            chartTypeSelect.value = 'bar';
-            chartTitleInput.value = '';
-            chartLabelsInput.value = '';
-            chartDatasetInput.value = '';
-            fillColorInput.value = '#36a2eb';
-            borderColorInput.value = '#36a2eb';
-            chartAreaColorInput.value = '#ffffff';
-            fontFamilySelect.value = "'Inter', sans-serif";
-            fontBoldBtn.classList.remove('bg-gray-300');
-            fontItalicBtn.classList.remove('bg-gray-300');
-            chartConfigTextarea.value = '';
-            if (currentChart) {
-                currentChart.destroy();
-                currentChart = null;
-            }
-            imageCode.value = '';
-        });
-        
-        dashboardBtn.addEventListener('click', () => {
-            editorView.classList.add('hidden');
-            createDashboardView.classList.add('hidden');
-            dashboardView.classList.remove('hidden');
-            editorBtn.classList.remove('hidden');
-            createDashboardBtn.classList.remove('hidden');
-            dashboardBtn.classList.add('hidden');
-            renderDashboard();
-        });
-        
-        createDashboardBtn.addEventListener('click', () => {
-            editorView.classList.add('hidden');
-            dashboardView.classList.add('hidden');
-            createDashboardView.classList.remove('hidden');
-            editorBtn.classList.remove('hidden');
-            dashboardBtn.classList.remove('hidden');
-            createDashboardBtn.classList.add('hidden');
-            renderChartSelection();
-            updateDashboardPreview();
-        });
-        
-        editorBtn.addEventListener('click', () => {
-            dashboardView.classList.add('hidden');
-            createDashboardView.classList.add('hidden');
-            editorView.classList.remove('hidden');
-            dashboardBtn.classList.remove('hidden');
-            createDashboardBtn.classList.remove('hidden');
-            editorBtn.classList.add('hidden');
-        });
-        
-        copyImageBtn.addEventListener('click', () => {
-            imageCode.select();
-            document.execCommand('copy');
-            showToast('Image code copied to clipboard!');
-        });
-        
-        // Dashboard event listeners
-        saveDashboardBtn.addEventListener('click', saveDashboard);
-        exportDashboardBtn.addEventListener('click', exportDashboardHTML);
-        
-        dashboardLayout.addEventListener('change', updateDashboardPreview);
-        dashboardTheme.addEventListener('change', updateDashboardPreview);
+        // Handle embed mode
+        handleEmbedMode();
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`;
+            toastMessage.textContent = message;
+            
+            // Show toast
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Hide toast
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
 
         // === Embed Mode Handler (updated) ===
         function handleEmbedMode() {
@@ -1115,17 +828,6 @@
         // Initialize
         handleEmbedMode();
         generateChart();
-
-        // Download image functionality
-        document.getElementById('downloadImageBtn').addEventListener('click', function() {
-            const canvas = document.getElementById('chartCanvas');
-            const chartName = document.getElementById('chartName').value || 'chart';
-            const link = document.createElement('a');
-            link.download = `${chartName}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            showToast('Chart downloaded successfully!');
-        });
     });
     </script>
 </body>
