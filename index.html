@@ -179,7 +179,7 @@
                     <!-- Embed Codes -->
                     <div class="mt-6 space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Website Embed (iFrame)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Notion/Website Embed (Direct URL)</label>
                             <div class="flex">
                                 <textarea id="iframeCode" rows="3" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 text-sm font-mono"></textarea>
                                 <button id="copyIframeBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-md text-sm font-medium transition-colors">
@@ -493,9 +493,9 @@
             const encodedData = encodeURIComponent(JSON.stringify(chartData));
             const encodedName = encodeURIComponent(chartName);
             
-            // iFrame embed code
-            const iframeEmbed = `<iframe src="${currentUrl}?embed=true&name=${encodedName}&data=${encodedData}" width="100%" height="400" frameborder="0"></iframe>`;
-            iframeCode.value = iframeEmbed;
+            // Direct URL for Notion/Website embed
+            const directUrl = `${currentUrl}?embed=true&name=${encodedName}&data=${encodedData}`;
+            iframeCode.value = directUrl;
 
             // Static image embed code (placeholder)
             const imageEmbed = `<img src="data:image/png;base64,CHART_IMAGE_PLACEHOLDER" alt="${chartName}" style="max-width: 100%; height: auto;" />`;
