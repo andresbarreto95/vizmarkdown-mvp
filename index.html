@@ -458,6 +458,24 @@
             };
         }
 
+        // Copy embed URL functionality
+        document.getElementById('copyEmbedBtn').addEventListener('click', async function() {
+            const embedUrlField = document.getElementById('embedUrl');
+            if (!embedUrlField.value) {
+                showToast('Generate a chart first', 'error');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(embedUrlField.value);
+                showToast('Embed URL copied to clipboard!');
+            } catch (err) {
+                // Fallback for older browsers
+                embedUrlField.select();
+                document.execCommand('copy');
+                showToast('Embed URL copied to clipboard!');
+            }
+        });
+
         // Generate chart
         async function generateChart() {
             try {
