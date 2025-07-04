@@ -761,36 +761,44 @@
         dashboardLayout.addEventListener('change', updateDashboardPreview);
         dashboardTheme.addEventListener('change', updateDashboardPreview);
 
-        // === Embed Mode Handler (replaced) ===
+        // === Embed Mode Handler (updated) ===
         function handleEmbedMode() {
             const urlParams = new URLSearchParams(window.location.search);
             const isEmbed = urlParams.get('embed');
             const embedData = urlParams.get('data');
 
             if (isEmbed === 'true' && embedData) {
-                // 1. Clear the entire body
-                document.body.innerHTML = '';
+                // 1. Identify UI elements to hide
+                const navElement = document.querySelector('nav');
+                const mainContentElement = document.querySelector('.max-w-7xl');
 
-                // 2. Center the chart and make background transparent
+                // 2. Hide them (preserve in DOM for script dependencies)
+                if (navElement) navElement.style.display = 'none';
+                if (mainContentElement) mainContentElement.style.display = 'none';
+
+                // 3. Style body to center chart
                 document.body.className = 'w-screen h-screen flex items-center justify-center bg-transparent p-4';
 
-                // 3. Add a single chart container
-                const chartContainer = document.createElement('div');
-                chartContainer.className = 'chart-container';
-                chartContainer.style.height = '100%';
-                chartContainer.innerHTML = '<canvas id="chartCanvas"></canvas>';
-                document.body.appendChild(chartContainer);
+                // 4. Create container for embedded chart
+                const embedContainer = document.createElement('div');
+                embedContainer.className = 'chart-container';
+                embedContainer.style.height = '100%';
+                embedContainer.innerHTML = '<canvas id="embeddedChartCanvas"></canvas>';
+                document.body.appendChild(embedContainer);
 
-                // 4. Generate and render chart
+                // 5. Generate and render chart
                 try {
                     const chartData = JSON.parse(decodeURIComponent(embedData));
                     const chartConfig = generateChartConfig(chartData);
-                    const canvas = document.getElementById('chartCanvas');
+
+                    const canvas = document.getElementById('embeddedChartCanvas');
                     const ctx = canvas.getContext('2d');
+
                     new Chart(ctx, chartConfig);
+
                 } catch (error) {
                     console.error('Error parsing embed data:', error);
-                    document.body.innerHTML = '<p style="font-family: sans-serif; color: red;">Error: Could not load chart data.</p>';
+                    embedContainer.innerHTML = '<p style="font-family: sans-serif; color: red;">Error: Could not load chart data.</p>';
                 }
             }
         }
