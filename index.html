@@ -200,6 +200,16 @@
                             </div>
                             <p class="mt-2 text-sm text-gray-500">Note: For embedding in websites that support iframes. For Notion, use the Download as Image option above.</p>
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Static Image</label>
+                            <div class="flex">
+                                <textarea id="emailImageCode" rows="2" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 text-sm font-mono"></textarea>
+                                <button id="copyEmailBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-r-md text-sm font-medium transition-colors">
+                                    Copy
+                                </button>
+                            </div>
+                            <p class="mt-2 text-sm text-gray-500">HTML code for embedding the chart as a static image in emails.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -659,7 +669,7 @@
             }
         }
 
-        // Generate chart
+        // Generate chart and embed codes
         async function generateChart() {
             try {
                 const chartData = getChartData();
@@ -683,6 +693,17 @@
                 if (embedUrlField) {
                     embedUrlField.value = embedUrl;
                 }
+
+                // Generate email static image code
+                const canvas = document.getElementById('chartCanvas');
+                const imageData = canvas.toDataURL('image/png');
+                const emailCode = `<img src="${imageData}" alt="${chartData.name || 'Chart'}" style="max-width: 100%; height: auto;" />`;
+                
+                // Update email image code field
+                const emailImageField = document.getElementById('emailImageCode');
+                if (emailImageField) {
+                    emailImageField.value = emailCode;
+                }
                 
                 // Apply chart area background to canvas
                 document.getElementById('chartCanvas').style.backgroundColor = chartData.chartAreaColor || '#ffffff';
@@ -693,6 +714,20 @@
                 showToast('Error generating chart', 'error');
             }
         }
+
+        // Add click handler for email copy button
+        document.getElementById('copyEmailBtn').addEventListener('click', async function() {
+            const emailImageField = document.getElementById('emailImageCode');
+            try {
+                await navigator.clipboard.writeText(emailImageField.value);
+                showToast('Email code copied to clipboard!');
+            } catch (err) {
+                // Fallback for older browsers
+                emailImageField.select();
+                document.execCommand('copy');
+                showToast('Email code copied to clipboard!');
+            }
+        });
 
         // Event listeners
         generateBtn.addEventListener('click', generateChart);
