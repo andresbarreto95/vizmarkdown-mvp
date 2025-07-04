@@ -505,9 +505,16 @@
                 // Copy embed URL button
                 const copyEmbedBtn = document.getElementById('copyEmbedBtn');
                 if (copyEmbedBtn) {
-                    copyEmbedBtn.addEventListener('click', () => {
-                        embedUrlField.select();
-                        document.execCommand('copy');
+                    copyEmbedBtn.addEventListener('click', async function() {
+                        try {
+                            await navigator.clipboard.writeText(embedUrlField.value);
+                            showToast('Embed URL copied to clipboard!');
+                        } catch (err) {
+                            // Fallback for older browsers
+                            embedUrlField.select();
+                            document.execCommand('copy');
+                            showToast('Embed URL copied to clipboard!');
+                        }
                     });
                 }
             }
