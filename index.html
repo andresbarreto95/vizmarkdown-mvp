@@ -6,8 +6,10 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="VizMarkdown Chart">
     <meta property="og:description" content="Interactive chart created with VizMarkdown">
-    <meta property="og:image" content="">
+    <meta property="og:site_name" content="VizMarkdown">
     <meta name="twitter:card" content="summary_large_image">
+    <meta http-equiv="X-Frame-Options" content="ALLOW-FROM *">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors *">
     <title>VizMarkdown - Create Charts with Simple Text</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -794,32 +796,32 @@
         // === Embed Mode Handler (updated) ===
         function handleEmbedMode() {
             const urlParams = new URLSearchParams(window.location.search);
-            const isEmbed = urlParams.get('embed');
+            const isEmbed = urlParams.get('embed') === 'true';
             const embedData = urlParams.get('data');
+            const chartName = urlParams.get('name');
 
-            if (isEmbed === 'true' && embedData) {
-                // Remove all body children
-                document.body.innerHTML = '';
-                // Remove all body styles
-                document.body.className = '';
-                document.body.style = '';
-                // Create only the chart canvas, full viewport
-                const embedCanvas = document.createElement('canvas');
-                embedCanvas.id = 'embeddedChartCanvas';
-                embedCanvas.style.display = 'block';
-                embedCanvas.style.width = '100vw';
-                embedCanvas.style.height = '100vh';
-                embedCanvas.style.maxWidth = '100vw';
-                embedCanvas.style.maxHeight = '100vh';
-                document.body.appendChild(embedCanvas);
-                // Render chart
+            if (isEmbed && embedData) {
                 try {
+                    // Clean the body
+                    document.body.innerHTML = '';
+                    document.body.style = 'margin:0;padding:0;background:transparent;';
+                    
+                    // Create minimal chart container
+                    const container = document.createElement('div');
+                    container.style = 'width:100%;height:100vh;display:flex;align-items:center;justify-content:center;';
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.id = 'embeddedChart';
+                    container.appendChild(canvas);
+                    document.body.appendChild(container);
+
+                    // Parse and render chart
                     const chartData = JSON.parse(decodeURIComponent(embedData));
-                    const chartConfig = generateChartConfig(chartData);
-                    const ctx = embedCanvas.getContext('2d');
-                    new Chart(ctx, chartConfig);
+                    const config = generateChartConfig(chartData);
+                    new Chart(canvas, config);
                 } catch (error) {
-                    document.body.innerHTML = '<p style="font-family: sans-serif; color: red;">Error: Could not load chart data.</p>';
+                    console.error('Error in embed mode:', error);
+                    document.body.innerHTML = '<div style="color:red;padding:20px;">Error loading chart</div>';
                 }
             }
         }
