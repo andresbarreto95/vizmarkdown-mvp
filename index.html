@@ -359,19 +359,6 @@
             input.addEventListener('input', debounce(generateChart, 500));
         });
 
-        // Debounce function to prevent too frequent updates
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
         // Render saved charts in dashboard view
         function renderSavedCharts() {
             if (savedCharts.length === 0) {
@@ -508,6 +495,21 @@
                 
                 // Set canvas background
                 canvas.style.backgroundColor = chartAreaColorInput.value;
+
+                // Generate and update embed URL
+                const chartData = {
+                    name: chartNameInput.value,
+                    config: chartConfig
+                };
+                const baseUrl = window.location.origin + window.location.pathname;
+                const compressedData = btoa(JSON.stringify(chartData));
+                const embedUrl = `${baseUrl}?embed=true&data=${encodeURIComponent(compressedData)}`;
+                
+                // Update embed URL field
+                const embedUrlField = document.getElementById('embedUrl');
+                if (embedUrlField) {
+                    embedUrlField.value = embedUrl;
+                }
                 
                 showToast('Chart updated successfully!');
             } catch (error) {
@@ -591,8 +593,75 @@
             generateChart();
         });
 
+        // Copy embed URL functionality
+        document.getElementById('copyEmbedBtn').addEventListener('click', async function() {
+            const embedUrlField = document.getElementById('embedUrl');
+            if (!embedUrlField.value) {
+                showToast('Generate a chart first', 'error');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(embedUrlField.value);
+                showToast('Embed URL copied to clipboard!');
+            } catch (err) {
+                // Fallback for older browsers
+                embedUrlField.select();
+                document.execCommand('copy');
+                showToast('Embed URL copied to clipboard!');
+            }
+        });
+
+        // Download image functionality
+        document.getElementById('downloadImageBtn').addEventListener('click', function() {
+            if (!currentChart) {
+                showToast('Please generate a chart first', 'error');
+                return;
+            }
+            const canvas = document.getElementById('chartCanvas');
+            const chartName = chartNameInput.value || 'chart';
+            const link = document.createElement('a');
+            link.download = `${chartName}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('Chart downloaded successfully!');
+        });
+
+        // Handle embed mode
+        function handleEmbedMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isEmbed = urlParams.get('embed') === 'true';
+            const embedData = urlParams.get('data');
+
+            if (isEmbed && embedData) {
+                try {
+                    // Clean the body
+                    document.body.innerHTML = '';
+                    document.body.style = 'margin:0;padding:0;background:transparent;';
+                    
+                    // Create minimal chart container
+                    const container = document.createElement('div');
+                    container.style = 'width:100%;height:100vh;display:flex;align-items:center;justify-content:center;';
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.id = 'embeddedChart';
+                    container.appendChild(canvas);
+                    document.body.appendChild(container);
+
+                    // Parse and render chart
+                    const chartData = JSON.parse(atob(decodeURIComponent(embedData)));
+                    new Chart(canvas, chartData.config);
+                } catch (error) {
+                    console.error('Error in embed mode:', error);
+                    document.body.innerHTML = `<div style="color:red;padding:20px;">Error loading chart: ${error.message}</div>`;
+                }
+            }
+        }
+
         // Toast notification function
         function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
             toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
                 type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
             }`;
@@ -621,6 +690,7 @@
 
         // Initialize chart on load
         generateChart();
+        handleEmbedMode();
     });
     </script>
 </body>
