@@ -372,21 +372,93 @@
             };
         }
 
-        // Get chart data from form
+        // Render saved charts in dashboard view
+        function renderSavedCharts() {
+            if (savedCharts.length === 0) {
+                savedChartsList.innerHTML = '';
+                noChartsMessage.classList.remove('hidden');
+            } else {
+                noChartsMessage.classList.add('hidden');
+                savedChartsList.innerHTML = savedCharts.map(chart => `
+                    <div class="bg-white rounded-lg shadow-sm border p-4">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-medium text-gray-900">${chart.name || 'Untitled Chart'}</h3>
+                                <p class="text-sm text-gray-500 mt-1">Created: ${new Date(chart.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <button class="delete-chart-btn text-red-600 hover:text-red-700" data-chart-id="${chart.id}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="savedChart${chart.id}"></canvas>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Render charts
+                savedCharts.forEach(chart => {
+                    const canvas = document.getElementById(`savedChart${chart.id}`);
+                    if (canvas) {
+                        new Chart(canvas, generateChartConfig(chart.chartData));
+                    }
+                });
+
+                // Add delete button handlers
+                document.querySelectorAll('.delete-chart-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const chartId = this.dataset.chartId;
+                        const chartIndex = savedCharts.findIndex(c => c.id === chartId);
+                        if (chartIndex > -1) {
+                            savedCharts.splice(chartIndex, 1);
+                            localStorage.setItem('vizmarkdown_charts', JSON.stringify(savedCharts));
+                            renderSavedCharts();
+                            showToast('Chart deleted successfully!');
+                        }
+                    });
+                });
+            }
+        }
+
+        // Modified getChartData function to handle multiple datasets with different colors
         function getChartData() {
             const labels = chartLabelsInput.value.split(',').map(label => label.trim());
-            const datasetLines = chartDatasetInput.value.split('\n');
-            const datasets = datasetLines.map(line => {
+            const datasetLines = chartDatasetInput.value.split('\n').filter(line => line.trim());
+            
+            // Validate dataset input
+            for (const line of datasetLines) {
+                const values = line.split(',').map(val => val.trim());
+                if (values.length < 2) {
+                    throw new Error('Each dataset line must have a name and at least one value');
+                }
+                if (values.slice(1).some(val => isNaN(Number(val)))) {
+                    throw new Error('All dataset values must be numbers');
+                }
+            }
+
+            // Generate colors for multiple datasets
+            const defaultColors = [
+                '#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
+                '#ffcd56', '#c9cbcf', '#4dc9f6', '#f66d9b', '#6ddcc4'
+            ];
+
+            const datasets = datasetLines.map((line, index) => {
                 const values = line.split(',').map(val => val.trim());
                 const name = values[0];
                 const data = values.slice(1).map(Number);
+                const color = defaultColors[index % defaultColors.length];
+                
                 return {
                     label: name,
                     data: data,
                     fill: true,
-                    backgroundColor: fillColorInput.value,
-                    borderColor: borderColorInput.value,
-                    tension: 0.4
+                    backgroundColor: chartData.chartType === 'line' ? color + '20' : color,
+                    borderColor: color,
+                    tension: 0.4,
+                    borderRadius: chartData.chartType === 'bar' ? chartData.roundedBorders : undefined,
+                    barPercentage: chartData.chartType === 'bar' ? 1 - chartData.barSpacing : undefined
                 };
             });
 
@@ -404,15 +476,13 @@
                 fontFamily: fontFamilySelect.value,
                 fontBold: fontBoldBtn.classList.contains('bg-gray-200'),
                 fontItalic: fontItalicBtn.classList.contains('bg-gray-200'),
-                chartAreaColor: chartAreaColorInput.value,
-                fillColor: fillColorInput.value,
-                borderColor: borderColorInput.value
+                chartAreaColor: chartAreaColorInput.value
             };
         }
 
-        // Generate chart configuration
+        // Modified generateChartConfig to handle bar-specific options
         function generateChartConfig(chartData) {
-            return {
+            const config = {
                 type: chartData.chartType,
                 data: {
                     labels: chartData.labels,
@@ -437,6 +507,12 @@
                             color: '#666',
                             font: {
                                 weight: 'bold'
+                            },
+                            formatter: function(value) {
+                                if (typeof value === 'number') {
+                                    return value.toLocaleString();
+                                }
+                                return value;
                             }
                         }
                     },
@@ -451,12 +527,71 @@
                             title: {
                                 display: !!chartData.yAxisLabel,
                                 text: chartData.yAxisLabel
-                            }
+                            },
+                            beginAtZero: true
                         }
                     }
                 }
             };
+
+            // Add bar-specific options
+            if (chartData.chartType === 'bar') {
+                config.options.plugins.tooltip = {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                };
+            }
+
+            return config;
         }
+
+        // Modified generateChart function to handle errors better
+        async function generateChart() {
+            try {
+                const chartData = getChartData();
+                const config = generateChartConfig(chartData);
+                
+                // Clear existing chart
+                const ctx = document.getElementById('chartCanvas').getContext('2d');
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+                
+                // Create new chart
+                currentChart = new Chart(ctx, config);
+                
+                // Generate embed URL with compression
+                const baseUrl = window.location.origin + window.location.pathname;
+                const compressedData = btoa(JSON.stringify(chartData));
+                const embedUrl = `${baseUrl}?embed=true&name=${encodeURIComponent(chartData.name || '')}&data=${encodeURIComponent(compressedData)}`;
+                
+                // Update embed URL field
+                const embedUrlField = document.getElementById('embedUrl');
+                if (embedUrlField) {
+                    embedUrlField.value = embedUrl;
+                }
+                
+                // Apply chart area background to canvas
+                document.getElementById('chartCanvas').style.backgroundColor = chartData.chartAreaColor || '#ffffff';
+                
+                showToast('Chart updated!');
+            } catch (error) {
+                console.error('Error generating chart:', error);
+                showToast(error.message || 'Error generating chart', 'error');
+            }
+        }
+
+        // Call renderSavedCharts when switching to dashboard view
+        dashboardBtn.addEventListener('click', function() {
+            editorView.classList.add('hidden');
+            createDashboardView.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+            editorBtn.classList.remove('hidden');
+            renderSavedCharts();
+        });
 
         // Copy embed URL functionality
         document.getElementById('copyEmbedBtn').addEventListener('click', async function() {
@@ -475,41 +610,6 @@
                 showToast('Embed URL copied to clipboard!');
             }
         });
-
-        // Generate chart
-        async function generateChart() {
-            try {
-                const chartData = getChartData();
-                const config = generateChartConfig(chartData);
-                
-                // Clear existing chart
-                const ctx = document.getElementById('chartCanvas').getContext('2d');
-                if (currentChart) {
-                    currentChart.destroy();
-                }
-                
-                // Create new chart
-                currentChart = new Chart(ctx, config);
-                
-                // Generate embed URL
-                const baseUrl = window.location.origin + window.location.pathname;
-                const embedUrl = `${baseUrl}?embed=true&name=${encodeURIComponent(chartData.name || '')}&data=${encodeURIComponent(JSON.stringify(chartData))}`;
-                
-                // Update embed URL field
-                const embedUrlField = document.getElementById('embedUrl');
-                if (embedUrlField) {
-                    embedUrlField.value = embedUrl;
-                }
-                
-                // Apply chart area background to canvas
-                document.getElementById('chartCanvas').style.backgroundColor = chartData.chartAreaColor || '#ffffff';
-                
-                showToast('Chart updated!');
-            } catch (error) {
-                console.error('Error generating chart:', error);
-                showToast('Error generating chart', 'error');
-            }
-        }
 
         // Download image functionality
         downloadImageBtn.addEventListener('click', function() {
@@ -533,27 +633,6 @@
         generateChart();
 
         // Handle embed mode
-        handleEmbedMode();
-
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
-                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-            }`;
-            toastMessage.textContent = message;
-            
-            // Show toast
-            setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-            }, 100);
-            
-            // Hide toast
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-            }, 3000);
-        }
-
-        // === Embed Mode Handler (updated) ===
         function handleEmbedMode() {
             const urlParams = new URLSearchParams(window.location.search);
             const isEmbed = urlParams.get('embed') === 'true';
@@ -576,14 +655,41 @@
                     document.body.appendChild(container);
 
                     // Parse and render chart
-                    const chartData = JSON.parse(decodeURIComponent(embedData));
+                    let chartData;
+                    try {
+                        // Try to parse as compressed data first
+                        const decompressedData = atob(decodeURIComponent(embedData));
+                        chartData = JSON.parse(decompressedData);
+                    } catch {
+                        // If that fails, try parsing as regular JSON (for backward compatibility)
+                        chartData = JSON.parse(decodeURIComponent(embedData));
+                    }
+
                     const config = generateChartConfig(chartData);
                     new Chart(canvas, config);
                 } catch (error) {
                     console.error('Error in embed mode:', error);
-                    document.body.innerHTML = '<div style="color:red;padding:20px;">Error loading chart</div>';
+                    document.body.innerHTML = `<div style="color:red;padding:20px;">Error loading chart: ${error.message}</div>`;
                 }
             }
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`;
+            toastMessage.textContent = message;
+            
+            // Show toast
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Hide toast
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
         }
 
         // Dashboard Functions
@@ -801,37 +907,64 @@
                     '</div>' +
                     '</div>';
             });
+            const backgroundColor = theme === 'dark' ? '#1a1a1a' : theme === 'blue' ? '#ebf8ff' : '#ffffff';
+            const textColor = theme === 'dark' ? '#ffffff' : '#000000';
+            const gridColumns = layout === '2x2' ? 'repeat(2, 1fr)' :
+                              layout === '3x2' ? 'repeat(3, 1fr)' :
+                              layout === '2x3' ? 'repeat(2, 1fr)' : '1fr';
+
             const htmlContent = `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"><\/script>
+    <title>${title}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"><\/script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: sans-serif; 
+            background: ${backgroundColor}; 
+        }
+        .dashboard-grid { 
+            display: grid; 
+            gap: 20px; 
+            padding: 20px; 
+            grid-template-columns: ${gridColumns};
+        }
+        .chart-container { 
+            background: white; 
+            border-radius: 8px; 
+            padding: 15px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+        h1 {
+            color: ${textColor};
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-  <div class="max-w-7xl mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-gray-900 mb-8">${title}</h1>
-    <div class="${themeClass} rounded-lg p-6">
-      <div class="${gridClass}">
+<body>
+    <h1>${title}</h1>
+    <div class="dashboard-grid">
         ${chartSections}
-      </div>
     </div>
-  </div>
+    <script>
+        Chart.register(ChartDataLabels);
+        ${selectedCharts.map((chartId, index) => {
+            const chart = savedCharts.find(c => c.id === chartId);
+            return `new Chart(document.getElementById('chart${index}'), ${JSON.stringify(generateChartConfig(chart.chartData))});`;
+        }).join('')}
+    </script>
 </body>
 </html>`;
             const blob = new Blob([htmlContent], { type: 'text/html' });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_dashboard.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${title.toLowerCase().replace(/\s+/g, '-')}-dashboard.html`;
+            link.click();
             URL.revokeObjectURL(url);
-            showToast('Dashboard HTML exported successfully!');
+            showToast('Dashboard exported successfully!');
         }
 
         // After DOMContentLoaded, add this event delegation:
@@ -846,6 +979,201 @@
         // Initialize
         handleEmbedMode();
         generateChart();
+
+        // Navigation button handlers
+        dashboardBtn.addEventListener('click', function() {
+            editorView.classList.add('hidden');
+            createDashboardView.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+            editorBtn.classList.remove('hidden');
+        });
+
+        createDashboardBtn.addEventListener('click', function() {
+            editorView.classList.add('hidden');
+            dashboardView.classList.add('hidden');
+            createDashboardView.classList.remove('hidden');
+            editorBtn.classList.remove('hidden');
+            renderChartSelection();
+        });
+
+        editorBtn.addEventListener('click', function() {
+            dashboardView.classList.add('hidden');
+            createDashboardView.classList.add('hidden');
+            editorView.classList.remove('hidden');
+            editorBtn.classList.add('hidden');
+        });
+
+        // Save button click handler
+        saveBtn.addEventListener('click', function() {
+            if (!currentChart) {
+                showToast('Please generate a chart first', 'error');
+                return;
+            }
+            
+            const chartData = getChartData();
+            const chart = {
+                id: Date.now().toString(),
+                name: chartData.name || 'Untitled Chart',
+                chartData: chartData,
+                createdAt: new Date().toISOString()
+            };
+            
+            savedCharts.push(chart);
+            localStorage.setItem('vizmarkdown_charts', JSON.stringify(savedCharts));
+            showToast('Chart saved successfully!');
+        });
+
+        // Clear button click handler
+        clearBtn.addEventListener('click', function() {
+            chartNameInput.value = '';
+            chartTitleInput.value = '';
+            chartLabelsInput.value = '';
+            chartDatasetInput.value = '';
+            xAxisLabelInput.value = '';
+            yAxisLabelInput.value = '';
+            showValuesCheckbox.checked = false;
+            roundedBordersInput.value = 0;
+            barSpacingInput.value = 0.1;
+            fontFamilySelect.value = "'Inter', sans-serif";
+            fontBoldBtn.classList.remove('bg-gray-200');
+            fontItalicBtn.classList.remove('bg-gray-200');
+            chartAreaColorInput.value = '#ffffff';
+            fillColorInput.value = '#36a2eb';
+            borderColorInput.value = '#36a2eb';
+            
+            generateChart();
+            showToast('Form cleared!');
+        });
+
+        // Font style button handlers
+        fontBoldBtn.addEventListener('click', function() {
+            this.classList.toggle('bg-gray-200');
+            generateChart();
+        });
+
+        fontItalicBtn.addEventListener('click', function() {
+            this.classList.toggle('bg-gray-200');
+            generateChart();
+        });
+
+        // Save Dashboard button handler
+        saveDashboardBtn.addEventListener('click', function() {
+            const title = dashboardTitle.value.trim();
+            if (!title) {
+                showToast('Please enter a dashboard title', 'error');
+                return;
+            }
+            
+            if (selectedCharts.length === 0) {
+                showToast('Please select at least one chart', 'error');
+                return;
+            }
+            
+            const dashboard = {
+                id: Date.now().toString(),
+                title: title,
+                layout: dashboardLayout.value,
+                theme: dashboardTheme.value,
+                charts: selectedCharts,
+                createdAt: new Date().toISOString()
+            };
+            
+            savedDashboards.push(dashboard);
+            localStorage.setItem('vizmarkdown_dashboards', JSON.stringify(savedDashboards));
+            showToast('Dashboard saved successfully!');
+        });
+
+        // Export Dashboard button handler
+        exportDashboardBtn.addEventListener('click', function() {
+            if (selectedCharts.length === 0) {
+                showToast('Please select at least one chart', 'error');
+                return;
+            }
+            
+            const title = dashboardTitle.value.trim() || 'Untitled Dashboard';
+            const layout = dashboardLayout.value;
+            const theme = dashboardTheme.value;
+            
+            // Generate HTML file content
+            const backgroundColor = theme === 'dark' ? '#1a1a1a' : theme === 'blue' ? '#ebf8ff' : '#ffffff';
+            const textColor = theme === 'dark' ? '#ffffff' : '#000000';
+            const gridColumns = layout === '2x2' ? 'repeat(2, 1fr)' :
+                              layout === '3x2' ? 'repeat(3, 1fr)' :
+                              layout === '2x3' ? 'repeat(2, 1fr)' : '1fr';
+
+            const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <title>${title}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"><\/script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: sans-serif; 
+            background: ${backgroundColor}; 
+        }
+        .dashboard-grid { 
+            display: grid; 
+            gap: 20px; 
+            padding: 20px; 
+            grid-template-columns: ${gridColumns};
+        }
+        .chart-container { 
+            background: white; 
+            border-radius: 8px; 
+            padding: 15px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+        h1 {
+            color: ${textColor};
+        }
+    </style>
+</head>
+<body>
+    <h1>${title}</h1>
+    <div class="dashboard-grid">
+        ${selectedCharts.map((chartId, index) => {
+            const chart = savedCharts.find(c => c.id === chartId);
+            return `
+                <div class="chart-container">
+                    <h3>${chart.name}</h3>
+                    <canvas id="chart${index}"></canvas>
+                </div>
+            `;
+        }).join('')}
+    </div>
+    <script>
+        Chart.register(ChartDataLabels);
+        ${selectedCharts.map((chartId, index) => {
+            const chart = savedCharts.find(c => c.id === chartId);
+            return `new Chart(document.getElementById('chart${index}'), ${JSON.stringify(generateChartConfig(chart.chartData))});`;
+        }).join('')}
+    </script>
+</body>
+</html>`;
+            
+            // Create and trigger download
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${title.toLowerCase().replace(/\s+/g, '-')}-dashboard.html`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            showToast('Dashboard exported successfully!');
+        });
+
+        // Chart selection click handler
+        chartSelectionGrid.addEventListener('click', function(e) {
+            const chartCard = e.target.closest('[data-chart-id]');
+            if (chartCard) {
+                const chartId = chartCard.dataset.chartId;
+                toggleChartSelection(chartId);
+            }
+        });
     });
     </script>
 </body>
